@@ -161,6 +161,33 @@
   $('install').onclick = () => hookAction('install', 'Hooks instalados. Las sesiones nuevas ya avisan a la mascota.');
   $('uninstall').onclick = () => hookAction('uninstall', 'Hooks quitados. La mascota seguirá viendo tus sesiones, con algo menos de detalle.');
 
+  // ---------- Actualizaciones ----------
+  const mb = b => (b ? `${Math.round(b / 1048576)} MB` : '');
+  function renderUpdate(u) {
+    const text = $('updText'), btn = $('updBtn'), bar = $('updBar');
+    const show = (label, cls = '') => { btn.hidden = !label; btn.textContent = label || ''; btn.className = `btn ${cls}`; btn.disabled = false; };
+    bar.hidden = u.state !== 'downloading';
+    switch (u.state) {
+      case 'dev': text.textContent = 'Esta copia se ejecuta desde el código: las actualizaciones solo funcionan con la app instalada.'; show(''); break;
+      case 'checking': case 'idle': text.textContent = 'Comprobando si hay una versión nueva…'; show(''); break;
+      case 'none': text.textContent = `Tienes la última versión (${u.current}).`; show('Buscar ahora'); break;
+      case 'available': text.textContent = `Hay una versión nueva: ${u.version}${u.size ? ` · ${mb(u.size)}` : ''}. Tienes la ${u.current}.`; show('Descargar'); break;
+      case 'downloading': text.textContent = `Descargando la ${u.version}… ${u.percent || 0} %`; bar.style.setProperty('--p', (u.percent || 0) / 100); show(''); break;
+      case 'ready': text.textContent = `La ${u.version} está lista. Se instala al reiniciar y la mascota vuelve sola.`; show('Reiniciar y actualizar', 'update-ready'); break;
+      case 'error': text.textContent = `No se pudo comprobar: ${u.message}`; show('Reintentar'); break;
+    }
+    $('version').textContent = `Versión ${u.current}`;
+  }
+  $('updBtn').onclick = () => {
+    const s = $('updBtn').textContent;
+    $('updBtn').disabled = true;
+    if (s === 'Descargar') api.invoke('update:download');
+    else if (s === 'Reiniciar y actualizar') api.send('update:install');
+    else api.invoke('update:check');
+  };
+  api.on('update', renderUpdate);
+  api.invoke('update:status').then(renderUpdate).catch(() => {});
+
   // ---------- General ----------
   $('openData').onclick = () => api.send('open-logs');
   $('quitApp').onclick = () => api.send('quit');

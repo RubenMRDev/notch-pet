@@ -133,4 +133,14 @@ input[type=color]::-webkit-color-swatch-wrapper { padding: 0; } input[type=color
 .ev::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: rgb(255 255 255 / .14); flex: none; }
 .ev.on { color: var(--txt); } .ev.on::before { background: var(--done); }
 
+/* Actualizaciones */
+.update-row > span { flex: 1; min-width: 0; }
+.progress { display: block; height: 4px; margin-top: 8px; border-radius: 2px; background: rgb(255 255 255 / .08); overflow: hidden; max-width: 320px; }
+.progress[hidden] { display: none; }
+.progress i { display: block; height: 100%; width: 100%; background: var(--work); border-radius: 2px;
+  transform: scaleX(var(--p, 0)); transform-origin: 0 50%; transition: transform .25s var(--ease-out); }
+.btn.update-ready { background: var(--done); border-color: var(--done); color: #0d1f14; font-weight: 600; }
+.btn.update-ready:hover { background: color-mix(in oklab, var(--done), white 12%); }
+.group + .group { margin-top: 12px; }
+
 @media (prefers-reduced-motion: reduce) { .page { animation: none; } }

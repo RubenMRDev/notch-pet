@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen, ipcMain, Tray, Menu, nativeImage, nativeTheme, globalShortcut, Notification, shell, dialog } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu, nativeImage, nativeTheme, globalShortcut, Notification, shell, dialog, net } = require('electron');
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
@@ -8,6 +8,9 @@ const { recover } = require('./recover');
 const { petPng } = require('./icon');
 const { watchFullscreen } = require('./fullscreen');
 const hooks = require('./hooks');
+const updater = require('./updater');
+const asks = require('./asks');
+const { randomUUID } = require('crypto');
 
 const PORT = 47321;
 const W = 440, H = 460;              // ventana transparente del notch (la pastilla vive dentro)
@@ -46,7 +49,18 @@ const loginOpts = () => (app.isPackaged ? {} : { path: process.execPath, args: [
 const fullConfig = () => ({ ...config, shortcutOk, autostart: app.getLoginItemSettings(loginOpts()).openAtLogin });
 
 const send = (ch, ...a) => { if (win && !win.isDestroyed()) win.webContents.send(ch, ...a); };
-const push = () => send('state', { ...view(sessions), ...testMood, stats, max: config.maxSessions });
+// Peticiones abiertas (permiso, pregunta o plan) que esperan tu respuesta desde el notch.
+const pending = new Map(); // id -> { id, session_id, tool, input, suggestions, fp, summary, res }
+function push() {
+  const v = view(sessions);
+  for (const s of v.sessions) s.asks = [...pending.values()].filter(p => p.session_id === s.id).map(p => ({ id: p.id, ...p.summary }));
+  send('state', { ...v, ...testMood, stats, max: config.maxSessions });
+}
+// Cierra una peticion: con decision se la pasa a Claude; sin ella, Claude sigue con su dialogo de siempre.
+function settle(p, decision = null) {
+  pending.delete(p.id);
+  try { if (!p.res.writableEnded) p.res.end(JSON.stringify({ decision })); } catch {}
+}
 const sendConfig = () => send('config', config);
 
 // Lee las conversaciones de ~/.claude/projects: asi ve tus ultimas sesiones aunque no tengas los hooks.
@@ -144,6 +158,8 @@ function buildTray() {
     { label: 'Ajustes', click: () => openSettings() },
     { label: 'Mostrar notch', type: 'checkbox', checked: config.visible, click: m => setConfig({ visible: m.checked }) },
     { label: 'No molestar', type: 'checkbox', checked: config.dnd, click: m => setConfig({ dnd: m.checked }) },
+    ...(update.state === 'ready' ? [{ type: 'separator' }, { label: `Reiniciar para actualizar a la ${update.version}`, click: installUpdate }]
+      : update.state === 'available' ? [{ type: 'separator' }, { label: `Hay una versión nueva (${update.version})`, click: () => openSettings('general') }] : []),
     { type: 'separator' },
     { label: 'Salir de Notch Pet', click: () => app.quit() },
   ]));
@@ -239,23 +255,36 @@ function openSession(s) {
   else fallback();
 }
 
-// --- Escribir a una sesion: claude -p --resume <id>, en su carpeta, con el texto por stdin ---
-// Si la sesion esta abierta en la app de Claude, alli no se vera hasta que la reabras.
-function sendToSession({ id, text } = {}) {
+// --- Escribir a una sesion: claude -p --resume <id>, en su carpeta. El mensaje va por stdin en formato stream-json,
+// que admite texto e imagenes. Si la sesion esta abierta en la app de Claude, alli no se vera hasta que la reabras.
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+function sendToSession({ id, text, images } = {}) {
   return new Promise(resolve => {
     const s = sessions.get(id);
     const fail = error => { if (s) { s.sending = false; push(); } resolve({ ok: false, error }); };
     if (!s || !SESSION_ID.test(id)) return fail('No encuentro esa sesión.');
     if (s.sending || s.status === 'working' || s.status === 'waiting') return fail('La sesión está ocupada. Espera a que termine.');
     text = String(text || '').trim();
-    if (!text) return fail('Escribe algo antes de enviar.');
+    images = Array.isArray(images) ? images : [];
+    if (!text && !images.length) return fail('Escribe algo o adjunta una imagen antes de enviar.');
     if (text.length > 4000) return fail('El mensaje es demasiado largo (máximo 4000 caracteres).');
+    if (images.length > 4) return fail('Como mucho 4 imágenes por mensaje.');
+    for (const im of images) {
+      if (!IMAGE_TYPES.includes(im?.media_type) || typeof im.data !== 'string' || !/^[A-Za-z0-9+/=]+$/.test(im.data)) return fail('Una de las imágenes no es válida (PNG, JPG, GIF o WebP).');
+      if (im.data.length * 0.75 > 5 * 1024 * 1024) return fail('Cada imagen puede pesar como mucho 5 MB.');
+    }
     if (!s.cwd || !fs.existsSync(s.cwd)) return fail('La carpeta de la sesión ya no existe.');
 
-    Object.assign(s, { sending: true, status: 'working', prompt: text, detail: 'Pensando…', tool: '', at: Date.now() });
+    const label = text || (images.length === 1 ? '[imagen]' : `[${images.length} imágenes]`);
+    Object.assign(s, { sending: true, status: 'working', prompt: label + (text && images.length ? ` · ${images.length} ${images.length === 1 ? 'imagen' : 'imágenes'}` : ''), detail: 'Pensando…', tool: '', at: Date.now() });
     push();
+    const content = [
+      ...(text ? [{ type: 'text', text }] : [{ type: 'text', text: 'Mira esta imagen.' }]),
+      ...images.map(im => ({ type: 'image', source: { type: 'base64', media_type: im.media_type, data: im.data } })),
+    ];
     // ponytail: shell porque en Windows claude es un .cmd; los argumentos son fijos y el id ya esta validado.
-    const p = spawn('claude', ['-p', '--resume', id, '--output-format', 'json'], { cwd: s.cwd, shell: true, windowsHide: true });
+    const p = spawn('claude', ['-p', '--resume', id, '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose'],
+      { cwd: s.cwd, shell: true, windowsHide: true });
     let out = '', err = '';
     const timer = setTimeout(() => p.kill(), 10 * 60e3);
     p.stdout.on('data', d => (out += d));
@@ -263,9 +292,12 @@ function sendToSession({ id, text } = {}) {
     p.on('error', e => { clearTimeout(timer); log('error', 'No se pudo lanzar claude', e); fail('No encuentro el comando claude. ¿Está instalado Claude Code?'); });
     p.on('close', () => {
       clearTimeout(timer);
-      let r; try { r = JSON.parse(out); } catch {
+      // La ultima linea con type "result" trae la respuesta final
+      let r = null;
+      for (const line of out.split('\n')) { try { const j = JSON.parse(line); if (j.type === 'result') r = j; } catch {} }
+      if (!r) {
         log('warn', `claude -p devolvió algo inesperado: ${(err || out).slice(0, 300)}`);
-        return fail((err || out || 'claude no respondió.').trim().slice(0, 300));
+        return fail((err || 'claude no respondió.').trim().slice(0, 300));
       }
       Object.assign(s, { sending: false, status: 'done', detail: r.result || '', at: Date.now() });
       push();
@@ -275,8 +307,40 @@ function sendToSession({ id, text } = {}) {
       }
       resolve({ ok: true, denied: (r.permission_denials || []).length });
     });
-    p.stdin.end(text);
+    p.stdin.end(JSON.stringify({ type: 'user', message: { role: 'user', content } }) + '\n');
   });
+}
+
+// --- Actualizaciones (solo con la app instalada), como en Taskvia: comprobar es automatico (al abrir y cada 4 h);
+// la descarga solo cuando la pides en Ajustes, y el instalador se ejecuta en silencio al reiniciar.
+// Estados: dev, idle, checking, none, available, downloading, ready, error.
+let update = { state: app.isPackaged ? 'idle' : 'dev' };
+function setUpdate(u) {
+  const was = update.state;
+  update = u;
+  if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('update', { ...update, current: app.getVersion() });
+  if (was !== u.state && tray) buildTray();
+}
+async function checkUpdate() {
+  if (!app.isPackaged || ['checking', 'downloading', 'ready'].includes(update.state)) return;
+  setUpdate({ state: 'checking' });
+  const r = await updater.checkUpdate(net, app.getVersion());
+  if (r.error) log('warn', `Actualizaciones: ${r.error}`);
+  setUpdate(r.error ? { state: 'error', message: r.error } : r.newer ? { state: r.downloaded ? 'ready' : 'available', version: r.version, size: r.size } : { state: 'none' });
+}
+async function downloadUpdate() {
+  if (update.state !== 'available') return;
+  const { version, size } = update;
+  setUpdate({ state: 'downloading', version, size, percent: 0 });
+  const r = await updater.downloadUpdate(net, app.getPath('temp'), app.getVersion(),
+    (got, total) => setUpdate({ state: 'downloading', version, size, percent: total ? Math.round(got / total * 100) : 0 }));
+  if (!r.ok) log('warn', `Actualizaciones: ${r.error}`);
+  setUpdate(r.ok ? { state: 'ready', version } : { state: 'error', message: r.error });
+}
+function installUpdate() {
+  if (update.state !== 'ready') return;
+  const r = updater.launchInstaller();
+  if (r.ok) app.quit(); else setUpdate({ state: 'error', message: r.error });
 }
 
 // --- IPC: solo se atiende a nuestras propias ventanas ---
@@ -314,6 +378,21 @@ on('test-alert', () => {
 });
 
 handle('send', sendToSession);
+handle('permission:decide', ({ id, choice } = {}) => {
+  const p = pending.get(id);
+  if (!p) return { ok: false, error: 'Esta petición ya no está abierta (quizá la respondiste en Claude).' };
+  const decision = asks.decide(p, choice);
+  if (!decision) return { ok: false, error: 'Contesta todas las preguntas antes de responder.' };
+  settle(p, decision);
+  const s = sessions.get(p.session_id);
+  if (s) Object.assign(s, { status: decision.behavior === 'allow' ? 'working' : s.status, detail: decision.behavior === 'allow' ? 'Pensando…' : 'Denegado', at: Date.now() });
+  push();
+  return { ok: true };
+});
+handle('update:status', () => ({ ...update, current: app.getVersion() }));
+handle('update:check', () => checkUpdate());
+handle('update:download', () => downloadUpdate());
+on('update:install', installUpdate);
 handle('config:get', () => fullConfig());
 handle('config:set', patch => setConfig(patch));
 handle('config:reset', () => setConfig({ colors: DEFAULTS.colors }));
@@ -349,9 +428,34 @@ function watchCursor() {
   setOpen(inside || pinned || typing);
 }
 
+// --- Peticiones de permiso: el hook espera aqui (como mucho ~9 min) a que respondas desde el notch ---
+function onPermission(req, res) {
+  const chunks = []; let size = 0;
+  req.on('data', c => { chunks.push(c); size += c.length; if (size > 256 * 1024) req.destroy(); });
+  req.on('end', () => {
+    let e;
+    try { e = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return res.writeHead(400).end(); }
+    if (!SESSION_ID.test(e.session_id || '') || !e.tool_name) return res.writeHead(400).end();
+    const p = { id: randomUUID(), session_id: e.session_id, tool: e.tool_name, input: e.tool_input || {}, suggestions: e.permission_suggestions || [],
+      fp: asks.fingerprint(e.tool_name, e.tool_input), summary: asks.summarize(e.tool_name, e.tool_input, e.permission_suggestions), res };
+    pending.set(p.id, p);
+    // Si el hook se corta (Claude lo cancela o se acaba el tiempo), la peticion desaparece del notch.
+    res.on('close', () => { if (pending.delete(p.id)) push(); });
+    const s = sessions.get(e.session_id) || { id: e.session_id, cwd: e.cwd, prompt: '', tool: '' };
+    const was = s.status;
+    Object.assign(s, { status: 'waiting', detail: p.summary.title, at: Date.now(), waitingSince: was === 'waiting' ? s.waitingSince : Date.now(), cwd: s.cwd || e.cwd });
+    sessions.set(s.id, s);
+    if (was !== 'waiting') alertWaiting(s);
+    push();
+    peek = { id: s.id, h: 150, until: Date.now() + 9000 };
+    send('asked', s.id);
+  });
+}
+
 // --- Eventos de los hooks de Claude (solo desde este equipo) ---
 function startServer() {
   const server = http.createServer((req, res) => {
+    if (req.method === 'POST' && req.url === '/permission') return onPermission(req, res);
     if (req.method !== 'POST' || req.url !== '/event') return res.writeHead(404).end();
     // Se juntan los trozos antes de decodificar: una letra con tilde puede llegar partida entre dos.
     const chunks = []; let size = 0;
@@ -360,6 +464,11 @@ function startServer() {
       try {
         const e = JSON.parse(Buffer.concat(chunks).toString('utf8'));
         if (!SESSION_ID.test(e.session_id || '')) return res.writeHead(400).end();
+        // Si ya se respondio en la ventana de Claude, la peticion sobra en el notch.
+        for (const p of pending.values()) {
+          if (p.session_id !== e.session_id) continue;
+          if (['Stop', 'UserPromptSubmit', 'SessionEnd'].includes(e.hook_event_name) || (e.hook_event_name === 'PostToolUse' && e.tool_fp === p.fp)) settle(p);
+        }
         const prev = apply(sessions, e);
         tally(stats, e, prev);
         writeJson('stats.json', stats);
@@ -402,9 +511,11 @@ else {
     setInterval(push, 30e3);
     setInterval(syncTranscripts, 5e3);
     setInterval(watchCursor, 80);
+    setTimeout(checkUpdate, 8000); // sin conexion no pasa nada: queda en "error" y se reintenta a las 4 h
+    setInterval(checkUpdate, 4 * 3600e3);
     log('info', `Arrancada v${app.getVersion()}`);
   });
 }
-app.on('will-quit', () => { globalShortcut.unregisterAll(); stopFullscreen?.(); });
+app.on('will-quit', () => { globalShortcut.unregisterAll(); stopFullscreen?.(); for (const p of pending.values()) settle(p); });
 // La ventana de ajustes se puede cerrar sin que se cierre la mascota.
 app.on('window-all-closed', () => {});

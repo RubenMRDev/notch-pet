@@ -45,7 +45,23 @@ function petPng(size, hex = '#f0916b') {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
-module.exports = { petPng };
+// .ico con varias medidas (cada una es un PNG dentro del .ico, como admite Windows desde Vista)
+function petIco(sizes = [16, 24, 32, 48, 64, 128, 256]) {
+  const pngs = sizes.map(s => petPng(s));
+  const head = Buffer.alloc(6 + 16 * sizes.length);
+  head.writeUInt16LE(0, 0); head.writeUInt16LE(1, 2); head.writeUInt16LE(sizes.length, 4);
+  let offset = head.length;
+  sizes.forEach((s, i) => {
+    const e = 6 + 16 * i;
+    head[e] = s >= 256 ? 0 : s; head[e + 1] = s >= 256 ? 0 : s;
+    head.writeUInt16LE(1, e + 4); head.writeUInt16LE(32, e + 6);
+    head.writeUInt32LE(pngs[i].length, e + 8); head.writeUInt32LE(offset, e + 12);
+    offset += pngs[i].length;
+  });
+  return Buffer.concat([head, ...pngs]);
+}
+
+module.exports = { petPng, petIco };
 
 if (require.main === module) {
   const fs = require('fs');
@@ -53,5 +69,8 @@ if (require.main === module) {
   require('assert').strictEqual(png.subarray(1, 4).toString(), 'PNG');
   fs.mkdirSync(__dirname + '/build', { recursive: true });
   fs.writeFileSync(__dirname + '/build/icon.png', png);
-  console.log('build/icon.png ok');
+  const ico = petIco();
+  require('assert').strictEqual(ico.readUInt16LE(4), 7);
+  fs.writeFileSync(__dirname + '/build/icon.ico', ico);
+  console.log('build/icon.png y build/icon.ico ok');
 }

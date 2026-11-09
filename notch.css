@@ -94,6 +94,20 @@ body:is(.sleep, .idle, .bored) .statusline { background: transparent; }
 
 /* Escribir a la sesion */
 .compose { position: relative; margin-top: 2px; cursor: default; }
+.field { position: relative; }
+.compose.drop .msg-in { border-color: var(--work); background: color-mix(in oklab, var(--work), transparent 88%); }
+.atts { display: flex; gap: 6px; flex-wrap: wrap; }
+.atts:not(:empty) { margin-bottom: 6px; }
+.att { position: relative; width: 52px; height: 52px; border-radius: 9px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--line); }
+.att img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.att-x { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; display: grid; place-items: center; border: 0; border-radius: 50%;
+  background: rgb(0 0 0 / .65); color: #fff; cursor: pointer; }
+.att-x svg.i { width: 11px; height: 11px; stroke-width: 2.4; }
+.clip { position: absolute; left: 5px; top: 5px; width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 8px;
+  background: transparent; color: var(--txt-3); cursor: pointer; transition: background .15s, color .15s; }
+.clip:hover { background: rgb(255 255 255 / .08); color: var(--txt); }
+.clip:disabled { opacity: .4; cursor: not-allowed; }
+.compose .msg-in { padding-left: 38px; }
 .compose input { width: 100%; height: 36px; padding: 0 44px 0 12px; border-radius: 11px; border: 1px solid var(--line);
   background: rgb(0 0 0 / .32); color: var(--txt); font: inherit; caret-color: var(--work); outline: none; transition: border-color .15s, background .15s; }
 .compose input::placeholder { color: var(--txt-3); }
@@ -106,6 +120,40 @@ body:is(.sleep, .idle, .bored) .statusline { background: transparent; }
 .send:disabled { opacity: .25; cursor: default; }
 .hint { color: var(--txt-3); }
 .hint.err { color: #ff9d9d; } .hint.ok { color: var(--done); }
+
+/* Lo que te pide la sesion */
+.askbox { margin-top: 4px; padding: 10px 11px 11px; border-radius: 11px; background: rgb(0 0 0 / .28);
+  border: 1px solid color-mix(in oklab, var(--wait), transparent 60%); cursor: default; }
+.ask-head { font-weight: 600; color: var(--wait); }
+.cmd { margin-top: 6px; font: 12px/1.45 var(--mono); color: var(--txt); white-space: pre-wrap; word-break: break-word;
+  max-height: 96px; overflow-y: auto; user-select: text; }
+.plan { margin-top: 6px; max-height: 170px; overflow-y: auto; white-space: pre-wrap; user-select: text; }
+.plan code { font: 12px var(--mono); background: rgb(255 255 255 / .07); padding: 1px 5px; border-radius: 5px; }
+.plan pre { font: 12px/1.45 var(--mono); background: rgb(0 0 0 / .35); border-radius: 8px; padding: 6px 8px; margin: 4px 0; white-space: pre-wrap; }
+.plan .lnk { color: var(--work); } .plan strong { font-weight: 650; }
+.q { margin-top: 8px; }
+.q p { color: var(--txt); }
+.hintline { color: var(--txt-3); }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.opt { height: 28px; padding: 0 11px; border-radius: 14px; border: 1px solid var(--line); background: var(--raised); color: var(--txt);
+  cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.opt:hover { background: rgb(255 255 255 / .1); }
+.opt.on { background: var(--txt); border-color: var(--txt); color: #121214; font-weight: 600; }
+.own { width: 100%; height: 30px; margin-top: 6px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--line); background: rgb(0 0 0 / .3);
+  color: var(--txt); font: inherit; caret-color: var(--work); outline: none; }
+.own::placeholder { color: var(--txt-3); }
+.own:focus { border-color: color-mix(in oklab, var(--work), transparent 40%); }
+.ask-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
+.abtn { height: 28px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--raised); color: var(--txt-2);
+  cursor: pointer; transition: background .15s, color .15s; }
+.abtn:hover { background: rgb(255 255 255 / .1); color: var(--txt); }
+.abtn.primary { background: var(--txt); border-color: var(--txt); color: #121214; font-weight: 600; }
+.abtn.primary:hover { background: #fff; }
+.abtn:active, .opt:active { transform: scale(.97); }
+.askbox .hint { margin-top: 6px; }
+.pk.ask { border-color: color-mix(in oklab, var(--wait), transparent 55%); }
+.pk.ask .pdot { align-self: center; }
+.pk.ask p b { color: var(--wait); font-weight: 600; }
 
 .empty { padding: 16px 12px 6px; text-align: center; color: var(--txt-2); }
 .empty b { display: block; color: var(--txt); font-weight: 600; margin-bottom: 2px; }

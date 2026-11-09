@@ -3,7 +3,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Notification', 'Stop', 'SessionEnd'];
+const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Notification', 'Stop', 'SessionEnd', 'PermissionRequest'];
+// PermissionRequest espera tu respuesta desde el notch (por eso no es async); el resto solo avisa y no frena a Claude.
+const entry = ev => (ev === 'PermissionRequest'
+  ? { type: 'command', command: CMD, timeout: 600 }
+  : { type: 'command', command: CMD, async: true });
 const MARK = '--notch-pet';
 // Empaquetada, hook.js vive fuera del .asar (app.asar.unpacked) para que node lo pueda leer.
 const HOOK = path.join(__dirname, 'hook.js').replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep).replace(/\\/g, '/');
@@ -14,7 +18,7 @@ const ours = h => (h.command || '').includes(MARK);
 const groups = (s, ev) => s.hooks?.[ev] || [];
 const installed = s => EVENTS.filter(ev => groups(s, ev).some(g => (g.hooks || []).some(ours)));
 // Instalados pero apuntando a otra ruta (por ejemplo, la version de desarrollo).
-const outdated = s => EVENTS.some(ev => groups(s, ev).some(g => (g.hooks || []).some(h => ours(h) && h.command !== CMD)));
+const outdated = s => EVENTS.some(ev => groups(s, ev).some(g => (g.hooks || []).some(h => ours(h) && JSON.stringify(h) !== JSON.stringify(entry(ev)))));
 
 function uninstall(s) {
   for (const ev of Object.keys(s.hooks || {})) {
@@ -30,7 +34,7 @@ function uninstall(s) {
 function install(s) {
   uninstall(s);
   s.hooks ||= {};
-  for (const ev of EVENTS) (s.hooks[ev] ||= []).push({ hooks: [{ type: 'command', command: CMD, async: true }] });
+  for (const ev of EVENTS) (s.hooks[ev] ||= []).push({ hooks: [entry(ev)] });
   return s;
 }
 
@@ -66,6 +70,8 @@ if (require.main === module) {
   assert.strictEqual(outdated(s), true);
   install(s);
   assert.strictEqual(outdated(s), false, 'reinstalar arregla la ruta');
+  assert.strictEqual(s.hooks.PermissionRequest[0].hooks[0].async, undefined, 'el de permisos espera la respuesta');
+  assert.strictEqual(s.hooks.PermissionRequest[0].hooks[0].timeout, 600);
   uninstall(s);
   assert.deepStrictEqual(s, { model: 'opus', hooks: { Stop: [{ hooks: [other] }] } }, 'deja lo ajeno intacto');
   assert.deepStrictEqual(uninstall({ model: 'x' }), { model: 'x' });

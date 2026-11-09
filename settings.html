@@ -120,7 +120,12 @@
     <!-- General -->
     <section class="page" data-page="general">
       <h1>General</h1>
-      <p class="lead">Arranque, datos y versión.</p>
+      <p class="lead">Arranque, actualizaciones y datos.</p>
+      <div class="group">
+        <div class="row update-row"><span>Actualizaciones<small id="updText">Comprobando…</small>
+            <span class="progress" id="updBar" hidden><i></i></span></span>
+          <button class="btn" id="updBtn" hidden></button></div>
+      </div>
       <div class="group">
         <div class="row"><label for="autostart">Abrir al iniciar Windows<small>La mascota aparece sola al encender el ordenador.</small></label><input type="checkbox" class="switch" id="autostart"></div>
         <div class="row"><span>Datos y registros<small id="dataPath"></small></span><button class="btn" id="openData"><span data-icon="folder"></span>Abrir carpeta</button></div>
