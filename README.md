@@ -49,6 +49,12 @@ O usa tu propia imagen (PNG, GIF animado o WebP con fondo transparente). Los col
 
 Todo ocurre en tu equipo: Notch Pet no envía nada a ningún servidor. Los hooks hablan con la app por `127.0.0.1`.
 
+## Descargar
+
+Descarga **`NotchPet-Setup-1.0.0.exe`** desde la [última versión](https://github.com/RubenMRDev/notch-pet/releases/latest), ábrelo y listo: se instala para tu usuario y arranca sola.
+
+> El instalador no está firmado, así que Windows SmartScreen avisará la primera vez: pulsa **Más información → Ejecutar de todas formas**.
+
 ## Instalar desde el código
 
 Necesitas [Node.js](https://nodejs.org) 20 o superior.
@@ -67,8 +73,6 @@ npm start
 | `npm run dist` | Genera el instalador de Windows en `dist/` |
 
 La primera vez se abren los ajustes en **Conexión con Claude** para que instales los hooks. El atajo `Ctrl + Alt + N` deja el notch abierto aunque quites el ratón.
-
-> El instalador no está firmado, así que Windows SmartScreen avisará al abrirlo la primera vez.
 
 ## Estructura
 
