@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es" data-skin="blob">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:">
+<title>Notch Pet</title>
+<link rel="stylesheet" href="pet.css">
+<link rel="stylesheet" href="notch.css">
+</head>
+<body class="sleep">
+  <div id="shell">
+    <span class="ear l" aria-hidden="true"></span><span class="ear r" aria-hidden="true"></span>
+    <div id="notch" role="region" aria-label="Notch Pet">
+      <header class="bar">
+        <div id="petslot" title="Hazme cosquillas"></div>
+        <div class="label" aria-live="polite"><span id="title">Zzz…</span><span id="sub"></span></div>
+        <div class="counters" id="counters"></div>
+        <div class="actions">
+          <button class="icon-btn" id="gear" title="Ajustes" aria-label="Ajustes"></button>
+          <button class="icon-btn" id="quit" title="Cerrar Notch Pet" aria-label="Cerrar Notch Pet"></button>
+        </div>
+      </header>
+      <div class="statusline" aria-hidden="true"></div>
+      <div class="peekcard" id="peekcard"></div>
+      <div class="panel">
+        <ul class="list" id="list"></ul>
+        <footer class="stats" id="stats"></footer>
+      </div>
+    </div>
+  </div>
+<script src="shared.js"></script>
+<script src="notch.js"></script>
+</body>
+</html>

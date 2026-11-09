@@ -1,0 +1,57 @@
+{
+  "name": "notch-pet",
+  "productName": "Notch Pet",
+  "version": "1.0.0",
+  "description": "Una mascota en el borde de tu pantalla que vigila tus sesiones de Claude Code",
+  "author": "Ruben",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node state.js && node hooks.js && node recover.js",
+    "dist": "node icon.js && electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.notchpet.app",
+    "files": [
+      "main.js",
+      "preload.js",
+      "state.js",
+      "recover.js",
+      "hooks.js",
+      "hook.js",
+      "icon.js",
+      "fullscreen.js",
+      "shared.js",
+      "notch.js",
+      "settings.js",
+      "index.html",
+      "settings.html",
+      "pet.css",
+      "notch.css",
+      "settings.css"
+    ],
+    "asarUnpack": [
+      "hook.js"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "shortcutName": "Notch Pet",
+      "artifactName": "NotchPet-Setup-${version}.${ext}",
+      "uninstallDisplayName": "Notch Pet"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  }
+}

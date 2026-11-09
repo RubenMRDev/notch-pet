@@ -1,0 +1,138 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: transparent; overflow: hidden; font: 13px/1.4 var(--font); color: var(--txt);
+  -webkit-font-smoothing: antialiased; user-select: none; cursor: default; }
+::selection { background: color-mix(in oklab, var(--work), transparent 50%); color: #fff; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--work); outline-offset: 1px; }
+svg.i { width: 14px; height: 14px; display: block; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- Silueta: una pastilla que sale del borde de la pantalla ---------- */
+#shell { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 236px; transition: width .42s var(--ease-spring); }
+#shell.open, #shell.peek { width: 404px; }
+.ear { position: absolute; top: 0; width: 12px; height: 12px; pointer-events: none; }
+.ear.l { left: -12px; background: radial-gradient(circle at 0 100%, transparent 11.5px, var(--bg) 12px); }
+.ear.r { right: -12px; background: radial-gradient(circle at 100% 100%, transparent 11.5px, var(--bg) 12px); }
+#notch { position: relative; height: 36px; overflow: hidden; background: var(--bg); border-radius: 0 0 18px 18px;
+  box-shadow: 0 12px 30px -12px rgb(0 0 0 / .75), 0 3px 8px -3px rgb(0 0 0 / .5);
+  transition: height .42s var(--ease-spring), border-radius .42s var(--ease-spring); }
+#shell.open #notch { height: var(--open-h, 140px); border-radius: 0 0 24px 24px; }
+#shell.peek:not(.open) #notch { height: var(--peek-h, 124px); border-radius: 0 0 24px 24px; }
+
+/* ---------- Barra ---------- */
+.bar { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px 0 12px; }
+#petslot { flex: none; margin-top: 3px; cursor: pointer; }
+.label { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+#title { font-weight: 600; flex: none; }
+#sub { color: var(--txt-2); overflow: hidden; text-overflow: ellipsis; }
+.counters { display: flex; gap: 8px; flex: none; }
+.cnt { display: inline-flex; align-items: center; gap: 5px; color: var(--txt-2); font-variant-numeric: tabular-nums; }
+.actions { display: none; gap: 6px; flex: none; }
+#shell.open .actions { display: flex; }
+#shell.open .counters { display: none; }
+.icon-btn { width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 50%;
+  background: var(--raised); color: var(--txt-2); cursor: pointer; transition: background .15s, color .15s; }
+.icon-btn:hover { background: rgb(255 255 255 / .11); color: var(--txt); }
+.icon-btn:active { transform: scale(.94); }
+
+/* Indicadores de estado */
+.spin { width: 10px; height: 10px; border-radius: 50%; border: 1.7px solid color-mix(in oklab, var(--work), transparent 72%);
+  border-top-color: var(--work); animation: spin .85s linear infinite; flex: none; }
+.pdot { width: 8px; height: 8px; border-radius: 50%; background: var(--wait); animation: pdot 1.3s ease-in-out infinite; flex: none; }
+.ring { width: 8px; height: 8px; border-radius: 50%; border: 1.6px solid var(--txt-3); flex: none; }
+.ok { color: var(--done); } .ok svg.i { width: 14px; height: 14px; stroke-width: 2.2; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pdot { 50% { transform: scale(.7); opacity: .55; } }
+
+/* Linea de estado en el borde inferior (solo cerrado) */
+.statusline { position: absolute; left: 20px; right: 20px; bottom: 0; height: 2px; border-radius: 2px; opacity: 0; transition: opacity .3s; }
+#shell:not(.open):not(.peek) .statusline { opacity: 1; }
+body.working .statusline { background: linear-gradient(90deg, transparent, var(--work), transparent) 0 0 / 45% 100% no-repeat,
+  color-mix(in oklab, var(--work), transparent 82%); animation: scan 1.8s var(--ease-out) infinite; }
+body.waiting .statusline { background: var(--wait); animation: breath 1.4s ease-in-out infinite; }
+body.happy .statusline { background: var(--done); }
+body:is(.sleep, .idle, .bored) .statusline { background: transparent; }
+@keyframes scan { from { background-position: -60% 0, 0 0; } to { background-position: 160% 0, 0 0; } }
+@keyframes breath { 50% { opacity: .35; } }
+
+/* ---------- Panel ---------- */
+.panel { opacity: 0; transform: translateY(-6px); filter: blur(3px); pointer-events: none;
+  transition: opacity .22s, transform .38s var(--ease-out), filter .22s; }
+#shell.open .panel { opacity: 1; transform: none; filter: none; pointer-events: auto; transition-delay: .06s; }
+.list { list-style: none; padding: 2px 8px 0; display: grid; gap: 2px; max-height: 360px; overflow-y: auto; }
+.list::-webkit-scrollbar, .detail::-webkit-scrollbar { width: 6px; }
+.list::-webkit-scrollbar-thumb, .detail::-webkit-scrollbar-thumb { background: rgb(255 255 255 / .12); border-radius: 3px; }
+.list::-webkit-scrollbar-track, .detail::-webkit-scrollbar-track { background: transparent; }
+
+.row { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto 24px; column-gap: 10px; row-gap: 6px; align-items: center;
+  padding: 8px 6px 8px 10px; border-radius: 12px; cursor: pointer; transition: background .15s; }
+.row:hover { background: var(--hover); }
+.row.expanded { background: var(--raised); cursor: default; padding-bottom: 10px; }
+.st { display: grid; place-items: center; height: 18px; }
+.main { min-width: 0; }
+.top { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.where { color: var(--txt-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 999; }
+.ago { color: var(--txt-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.go { width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent;
+  color: var(--txt-3); cursor: pointer; transition: background .15s, color .15s; }
+.go:hover { background: rgb(255 255 255 / .09); color: var(--txt); }
+.detail { color: var(--txt-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.row.waiting .detail { color: var(--wait); }
+.row.expanded .detail { white-space: pre-wrap; color: var(--txt); max-height: 190px; overflow-y: auto; user-select: text; cursor: text;
+  margin-top: 4px; padding-right: 4px; }
+.extra { grid-column: 2 / -1; min-width: 0; }
+.ask { color: var(--txt-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.more { border: 0; background: none; color: var(--work); cursor: pointer; padding: 0; justify-self: start; }
+.more:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Markdown del ultimo mensaje */
+.detail code { font: 12px var(--mono); background: rgb(255 255 255 / .07); padding: 1px 5px; border-radius: 5px; }
+.detail pre { font: 12px/1.45 var(--mono); background: rgb(0 0 0 / .35); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 9px; margin: 5px 0; white-space: pre-wrap; }
+.detail strong { font-weight: 650; } .detail .h { display: inline-block; margin-top: 3px; }
+.detail .lnk { color: var(--work); }
+
+/* Escribir a la sesion */
+.compose { position: relative; margin-top: 2px; cursor: default; }
+.compose input { width: 100%; height: 36px; padding: 0 44px 0 12px; border-radius: 11px; border: 1px solid var(--line);
+  background: rgb(0 0 0 / .32); color: var(--txt); font: inherit; caret-color: var(--work); outline: none; transition: border-color .15s, background .15s; }
+.compose input::placeholder { color: var(--txt-3); }
+.compose input:focus { border-color: color-mix(in oklab, var(--work), transparent 40%); background: rgb(0 0 0 / .45); }
+.compose input:disabled { opacity: .5; cursor: not-allowed; }
+.send { position: absolute; right: 5px; top: 5px; width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 8px;
+  background: var(--txt); color: #121214; cursor: pointer; transition: opacity .15s, transform .1s; }
+.send svg.i { stroke-width: 2.2; }
+.send:active { transform: scale(.94); }
+.send:disabled { opacity: .25; cursor: default; }
+.hint { color: var(--txt-3); }
+.hint.err { color: #ff9d9d; } .hint.ok { color: var(--done); }
+
+.empty { padding: 16px 12px 6px; text-align: center; color: var(--txt-2); }
+.empty b { display: block; color: var(--txt); font-weight: 600; margin-bottom: 2px; }
+.stats { margin: 8px 14px 0; padding: 9px 0 12px; border-top: 1px solid var(--line); color: var(--txt-3); text-align: center;
+  font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Tarjeta "ha terminado" ---------- */
+.peekcard { display: none; padding: 2px 10px 12px; }
+#shell.peek:not(.open) .peekcard { display: block; animation: rise .4s var(--ease-out); }
+#shell.peek:not(.open) .panel { display: none; }
+.pk { padding: 10px 12px; border-radius: 12px; background: var(--raised); border: 1px solid color-mix(in oklab, var(--done), transparent 62%); }
+.pk .top { gap: 7px; }
+.pk .ok { flex: none; align-self: center; }
+.pk p { color: var(--txt-2); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pk small { display: block; margin-top: 6px; color: var(--txt-3); font-size: inherit; }
+@keyframes rise { from { opacity: 0; transform: translateY(-6px); } }
+
+/* ---------- Cosquillas ---------- */
+.pet.poke :is(.body, .custom) { animation: boing .5s var(--ease-out); }
+.pet.dizzy :is(.body, .custom) { animation: wobble .5s ease-in-out infinite; }
+.pet.dizzy .eye { animation: spin .6s linear infinite; border-radius: 50%; width: 5px; height: 5px; background: none; border: 1.5px dotted var(--ink); }
+.pet.dizzy .eye::after { display: none; }
+.pet.poke .fx, .pet.dizzy .fx { opacity: 1; color: #ff86ad; animation: none; }
+@keyframes boing { 0% { transform: scale(1); } 30% { transform: scale(1.22, .74); } 60% { transform: scale(.88, 1.16) translateY(-5px); } 100% { transform: scale(1); } }
+@keyframes wobble { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(12deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  #shell, #notch, .panel { transition-duration: .01s !important; }
+  .spin, .pdot, .statusline { animation: none !important; }
+}

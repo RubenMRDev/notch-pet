@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es" data-skin="blob">
+<head>
+<meta charset="utf-8">
+<title>Notch Pet · escena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=block">
+<link rel="stylesheet" href="../pet.css">
+<link rel="stylesheet" href="../notch.css">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body class="sleep">
+  <div id="world">
+    <div class="wall" aria-hidden="true"><i class="blob a"></i><i class="blob b"></i><i class="blob c"></i><i class="grain"></i></div>
+
+    <div id="notchStage">
+      <div id="shell">
+        <span class="ear l"></span><span class="ear r"></span>
+        <div id="notch">
+          <header class="bar">
+            <div id="petslot"></div>
+            <div class="label"><span id="title">Zzz…</span><span id="sub"></span></div>
+            <div class="counters" id="counters"></div>
+            <div class="actions"><button class="icon-btn" id="gear"></button><button class="icon-btn" id="quit"></button></div>
+          </header>
+          <div class="statusline"></div>
+          <div class="peekcard" id="peekcard"></div>
+          <div class="panel"><ul class="list" id="list"></ul><footer class="stats" id="stats"></footer></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="copy"></div>
+
+    <div id="skinsScene" aria-hidden="true"></div>
+
+    <div id="endCard" aria-hidden="true">
+      <div class="endpet happy" data-skin="blob" id="endPet"></div>
+      <h1>Notch Pet</h1>
+      <p>Tu mascota para Claude Code</p>
+      <span class="url">github.com/RubenMRDev/notch-pet</span>
+    </div>
+  </div>
+<script src="fake-api.js"></script>
+<script src="../shared.js"></script>
+<script src="../notch.js"></script>
+<script src="scene.js"></script>
+</body>
+</html>

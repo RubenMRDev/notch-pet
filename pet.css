@@ -1,0 +1,127 @@
+/* Tokens y mascota: compartidos por el notch y los ajustes.
+   Humor = clase en un antecesor (.sleep .idle .bored .working .waiting .happy, + .impatient).
+   Aspecto = data-skin en un antecesor (blob, cat, ghost, robot, image). Herramienta = data-tool junto al humor. */
+:root {
+  /* Colores que el usuario puede cambiar */
+  --bg: #0a0a0c; --pet: #f0916b; --work: #6aa8ff; --wait: #ffb340; --done: #5fd38d;
+  /* Neutros: grises tintados hacia el fondo, nunca gris puro */
+  --ink: #1b1214;
+  --txt: #eeeef2; --txt-2: #a9a9b4; --txt-3: #7c7c88;
+  --line: rgb(255 255 255 / .07); --hover: rgb(255 255 255 / .045); --raised: rgb(255 255 255 / .06);
+  --ease-out: cubic-bezier(.22, 1, .36, 1);       /* salidas */
+  --ease-spring: cubic-bezier(.32, .72, 0, 1);    /* abrir y cerrar el notch */
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --mono: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+}
+
+/* ---------- Mascota ---------- */
+.pet { --c: var(--pet); position: relative; width: 30px; height: 25px; flex: none;
+  transform: scaleX(var(--fat, 1)); transition: transform .6s var(--ease-out); }
+.body, .custom { position: absolute; inset: 0; transform-origin: 50% 100%; animation: breathe 3.6s ease-in-out infinite; }
+.body {
+  border-radius: 50% 50% 44% 44% / 62% 62% 38% 38%;
+  background:
+    radial-gradient(70% 55% at 32% 26%, color-mix(in oklab, var(--c), white 30%) 0%, transparent 70%),
+    radial-gradient(120% 90% at 50% 100%, color-mix(in oklab, var(--c), black 22%) 0%, var(--c) 62%);
+  transition: background .3s var(--ease-out);
+}
+.custom { display: none; width: 100%; height: 100%; object-fit: contain; }
+
+.eye { position: absolute; top: 8px; width: 4px; height: 6px; border-radius: 3px; background: var(--ink);
+  animation: blink 5.2s infinite; transition: height .2s var(--ease-out), top .2s var(--ease-out), width .2s var(--ease-out); }
+.eye::after { content: ""; position: absolute; top: 1px; right: .5px; width: 1.5px; height: 1.5px; border-radius: 50%; background: #fff; opacity: .9; }
+.eye.l { left: 8px; } .eye.r { right: 8px; animation-delay: .02s; }
+.mouth { position: absolute; left: 50%; top: 15px; width: 5px; height: 2.5px; transform: translateX(-50%);
+  border: 1.5px solid var(--ink); border-top: 0; border-radius: 0 0 5px 5px; opacity: .85; transition: all .2s var(--ease-out); }
+.cheek { position: absolute; top: 14px; width: 6px; height: 3.5px; border-radius: 50%;
+  background: radial-gradient(closest-side, #ff6f7a 0%, transparent 100%); opacity: .55; }
+.cheek.l { left: 3px; } .cheek.r { right: 3px; }
+.fx { position: absolute; right: -10px; top: -4px; font: 800 11px/1 var(--font); opacity: 0; pointer-events: none; }
+
+@keyframes breathe { 50% { transform: scale(1.035, .96); } }
+@keyframes hop { 0%, 100% { transform: translateY(0) scale(1); } 35% { transform: translateY(-3.5px) scale(.96, 1.05); } 70% { transform: translateY(0) scale(1.04, .96); } }
+@keyframes shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-7deg); } 75% { transform: rotate(7deg); } }
+@keyframes stomp { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-3px) rotate(-9deg); } 50% { transform: translateY(0); } 75% { transform: translateY(-3px) rotate(9deg); } }
+@keyframes sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes look { 0%, 38% { transform: translateX(-1.4px); } 50%, 88% { transform: translateX(1.4px); } }
+@keyframes glance { 0%, 70%, 100% { transform: translateX(0); } 76%, 86% { transform: translateX(1.2px); } }
+@keyframes zzz { 0% { opacity: 0; transform: translate(0, 4px) scale(.8); } 30% { opacity: .9; } 100% { opacity: 0; transform: translate(6px, -7px) scale(1.1); } }
+@keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
+@keyframes float { 50% { translate: 0 -2px; } }
+@keyframes beacon { 0%, 70%, 100% { opacity: 1; } 80% { opacity: .25; } }
+
+/* ---------- Humores ---------- */
+.idle .eye { animation: blink 5.2s infinite, glance 9s ease-in-out infinite; }
+.sleep .eye { height: 1.6px; top: 10.5px; animation: none; }
+.sleep .eye::after, .bored .eye::after { display: none; }
+.sleep .mouth { width: 3px; height: 1px; border-width: 1.2px; opacity: .5; }
+.sleep .fx { color: var(--txt-3); animation: zzz 2.6s ease-out infinite; }
+.bored .eye { height: 3px; top: 10px; border-radius: 1px 1px 3px 3px; animation: none; }
+.bored .mouth { width: 5px; height: 0; border-width: 1.5px 0 0; border-radius: 0; top: 16px; }
+.bored :is(.body, .custom) { animation: sway 4.5s ease-in-out infinite; }
+.bored .fx { color: var(--txt-3); opacity: .8; letter-spacing: 1px; }
+.working :is(.body, .custom) { animation: hop .62s ease-in-out infinite; }
+.working .eye { animation: look 1.7s ease-in-out infinite; }
+.waiting .pet { --c: var(--wait); }
+.waiting :is(.body, .custom) { animation: shake .36s ease-in-out infinite; }
+.waiting .eye { width: 5px; height: 7px; top: 7px; animation: blink 2.2s infinite; }
+.waiting .mouth { width: 4px; height: 4px; border: 1.5px solid var(--ink); border-radius: 50%; top: 15px; }
+.waiting .fx { color: var(--wait); opacity: 1; font-size: 13px; }
+.waiting.impatient :is(.body, .custom) { animation: stomp .3s linear infinite; }
+.happy :is(.body, .custom) { animation: hop 1.1s ease-in-out infinite; }
+.happy .eye { background: none; border: 2px solid var(--ink); border-bottom: 0; border-radius: 6px 6px 0 0; height: 4px; width: 6px; top: 9px; animation: none; }
+.happy .eye::after { display: none; }
+.happy .eye.l { left: 6px; } .happy .eye.r { right: 6px; }
+.happy .mouth { width: 7px; height: 3.5px; background: var(--ink); border: 0; border-radius: 0 0 7px 7px; opacity: 1; }
+
+/* ---------- Aspectos ---------- */
+[data-skin=cat] .body::before, [data-skin=cat] .body::after { content: ""; position: absolute; top: -5px; width: 10px; height: 9px;
+  background: linear-gradient(color-mix(in oklab, var(--c), black 12%), var(--c)); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+[data-skin=cat] .body::before { left: 2px; transform: rotate(-14deg); } [data-skin=cat] .body::after { right: 2px; transform: rotate(14deg); }
+[data-skin=cat] .cheek { width: 7px; height: 1px; border-radius: 0; background: var(--ink); opacity: .45; box-shadow: 0 2.5px 0 var(--ink); top: 13.5px; }
+[data-skin=cat] .cheek.l { left: -1px; transform: rotate(8deg); } [data-skin=cat] .cheek.r { right: -1px; transform: rotate(-8deg); }
+
+[data-skin=ghost] .body { border-radius: 50% 50% 14% 14% / 70% 70% 18% 18%; opacity: .94;
+  -webkit-mask: radial-gradient(circle at 50% 100%, transparent 2.6px, #000 3.1px) 0 0 / 7.5px 100% repeat-x; }
+[data-skin=ghost] .pet { animation: float 2.6s ease-in-out infinite; }
+
+[data-skin=robot] .body { border-radius: 7px 7px 6px 6px;
+  background:
+    linear-gradient(var(--ink), var(--ink)) 50% 34% / 74% 46% no-repeat,
+    linear-gradient(180deg, color-mix(in oklab, var(--c), white 18%), color-mix(in oklab, var(--c), black 16%)); }
+[data-skin=robot] .body::before { content: ""; position: absolute; left: calc(50% - 1px); top: -6px; width: 2px; height: 6px; background: color-mix(in oklab, var(--c), black 30%); }
+[data-skin=robot] .body::after { content: ""; position: absolute; left: calc(50% - 2.5px); top: -9px; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--work); animation: beacon 2.4s infinite; }
+[data-skin=robot] .eye { background: var(--work); border-radius: 1px; width: 4px; height: 4px; top: 6px; }
+[data-skin=robot] .eye::after { display: none; }
+[data-skin=robot] .eye.l { left: 9px; } [data-skin=robot] .eye.r { right: 9px; }
+[data-skin=robot].happy .eye, [data-skin=robot] .happy .eye { border-color: var(--work); background: none; }
+[data-skin=robot] .mouth, [data-skin=robot] .cheek { display: none; }
+
+[data-skin=image] .body { display: none; }
+[data-skin=image] .custom { display: block; }
+[data-skin=image] .custom:not([src]) { display: none; }
+[data-skin=image] .pet { height: 28px; }
+
+/* ---------- Accesorios segun la herramienta ---------- */
+.acc { position: absolute; inset: 0; pointer-events: none; display: none; }
+.working[data-tool] .acc { display: block; }
+/* Leer o buscar: gafas */
+.working[data-tool=read] .acc::before { content: ""; position: absolute; top: 6.5px; left: 5px; width: 20px; height: 8px;
+  background:
+    radial-gradient(circle at 4px 4px, transparent 2.6px, var(--ink) 2.8px 4px, transparent 4.2px),
+    radial-gradient(circle at 16px 4px, transparent 2.6px, var(--ink) 2.8px 4px, transparent 4.2px),
+    linear-gradient(var(--ink), var(--ink)) 50% 45% / 5px 1.3px no-repeat; }
+/* Editar: lapiz */
+.working[data-tool=edit] .acc::before { content: ""; position: absolute; right: -3px; top: -1px; width: 3px; height: 14px; border-radius: 1px;
+  background: linear-gradient(#ffd66b 0 70%, #f3b6a0 70% 85%, var(--ink) 85%); transform: rotate(32deg); }
+/* Terminal: >_ */
+.working[data-tool=term] .acc::before { content: ">_"; position: absolute; right: -13px; bottom: 2px; padding: 0 2px; border-radius: 3px;
+  font: 700 7px/10px var(--mono); color: var(--done); background: var(--ink); }
+/* Web: globo */
+.working[data-tool=web] .acc::before { content: ""; position: absolute; right: -9px; bottom: 1px; width: 8px; height: 8px; border-radius: 50%;
+  border: 1.5px solid var(--work); background: linear-gradient(var(--work), var(--work)) 50% / 100% 1.5px no-repeat; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pet, .pet * { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
+}

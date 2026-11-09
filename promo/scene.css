@@ -1,0 +1,62 @@
+/* Escena de demostracion: el notch real sobre un "escritorio", para el anuncio y las capturas del README. */
+html { background: #0b0a10; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+#world { position: fixed; inset: 0; overflow: hidden; --display: "Bricolage Grotesque", var(--font); }
+
+/* ---------- Fondo de escritorio ---------- */
+.wall { position: absolute; inset: -12%; background: radial-gradient(120% 80% at 50% 0%, #1a1726 0%, #0b0a10 60%); }
+.blob { position: absolute; border-radius: 50%; filter: blur(70px); animation: drift 16s ease-in-out infinite alternate; }
+.blob.a { width: 80%; height: 42%; left: -18%; bottom: 4%; background: #ff7a59; opacity: .5; }
+.blob.b { width: 70%; height: 38%; right: -24%; top: 20%; background: #5b6cff; opacity: .42; animation-duration: 19s; }
+.blob.c { width: 55%; height: 28%; left: 28%; top: 52%; background: #b84dff; opacity: .26; animation-duration: 23s; }
+.grain { position: absolute; inset: 0; opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+@keyframes drift { to { transform: translate(7%, -6%) scale(1.1); } }
+
+/* ---------- El notch, ampliado ---------- */
+#notchStage { position: absolute; top: 0; left: 0; right: 0; height: 480px; transform-origin: 50% 0;
+  transform: translateY(var(--ny, 0)) scale(var(--ns, 1)); transition: transform 1s var(--ease-spring); }
+.video #notchStage { --ns: 1.2; --ny: -90px; }
+.video #notchStage.in { --ny: 0px; }
+.video #notchStage.out { --ny: -110px; }
+
+/* ---------- Titulares ---------- */
+#copy { position: absolute; left: 34px; right: 34px; top: 67%; }
+.headline { position: absolute; inset: 0 0 auto; font: 800 46px/1.02 var(--display); letter-spacing: -.035em; color: #fff; text-wrap: balance; }
+.headline em { font-style: normal; color: #ffb199; }
+.headline .w { display: inline-block; opacity: 0; transform: translateY(26px); filter: blur(8px);
+  transition: opacity .55s var(--ease-out), transform .7s var(--ease-out), filter .55s var(--ease-out); transition-delay: calc(var(--i) * 55ms); }
+.headline.in .w { opacity: 1; transform: none; filter: none; }
+.headline.leave .w { opacity: 0; transform: translateY(-14px); filter: blur(6px); transition-duration: .3s; transition-delay: calc(var(--i) * 20ms); }
+
+/* ---------- Galeria de mascotas ---------- */
+#skinsScene { position: absolute; left: 0; right: 0; top: 30%; display: flex; justify-content: center; gap: 12px; pointer-events: none; }
+.skintile { width: 112px; height: 132px; display: grid; justify-items: center; align-content: center; gap: 22px; border-radius: 22px;
+  background: rgb(10 10 12 / .72); box-shadow: 0 18px 40px -18px rgb(0 0 0 / .8), inset 0 0 0 1px rgb(255 255 255 / .07);
+  opacity: 0; transform: translateY(30px) scale(.92); transition: opacity .5s var(--ease-out), transform .8s var(--ease-spring); transition-delay: calc(var(--i) * 90ms); }
+.skintile .pet { transform: scale(2.3); transform-origin: 50% 70%; }
+.skintile span { font: 700 15px var(--display); color: var(--txt-2); letter-spacing: -.01em; }
+#skinsScene.in .skintile { opacity: 1; transform: none; }
+#skinsScene.leave .skintile { opacity: 0; transform: translateY(-20px) scale(.95); transition-duration: .35s; transition-delay: calc(var(--i) * 30ms); }
+
+/* ---------- Cierre ---------- */
+#endCard { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; text-align: center; gap: 0;
+  opacity: 0; pointer-events: none; transition: opacity .6s var(--ease-out); }
+#endCard.in { opacity: 1; }
+.endpet { width: 120px; height: 110px; display: grid; place-items: center; margin-bottom: 26px; }
+.endpet .pet { transform: scale(4.2); transform-origin: 50% 60%; }
+#endCard h1 { font: 800 64px/1 var(--display); letter-spacing: -.045em; color: #fff; }
+#endCard p { font: 500 20px/1.3 var(--display); color: var(--txt-2); margin-top: 12px; }
+#endCard .url { margin-top: 26px; padding: 8px 14px; border-radius: 999px; font: 600 14px var(--mono); color: var(--txt);
+  background: rgb(255 255 255 / .08); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1); }
+#endCard > * { opacity: 0; transform: translateY(18px); transition: opacity .6s var(--ease-out), transform .8s var(--ease-spring); }
+#endCard.in > * { opacity: 1; transform: none; }
+#endCard.in > :nth-child(2) { transition-delay: .12s; } #endCard.in > :nth-child(3) { transition-delay: .22s; } #endCard.in > :nth-child(4) { transition-delay: .34s; }
+
+/* ---------- Capturas apaisadas para el README ---------- */
+.shot #notchStage { --ns: 1; }
+.shot #copy, .shot #endCard { display: none; }
+.shot.pets #notchStage { display: none; }
+.shot.pets #skinsScene { top: 50%; transform: translateY(-50%); gap: 18px; }
+.shot.pets .skintile { width: 140px; height: 160px; }
+.shot.pets .skintile .pet { transform: scale(2.8); }
