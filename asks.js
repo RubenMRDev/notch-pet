@@ -17,22 +17,22 @@ function summarize(tool, input = {}, suggestions = []) {
       question: short(q.question, 300), header: short(q.header, 40), multiSelect: !!q.multiSelect,
       options: (q.options || []).slice(0, 6).map(o => ({ label: short(o.label, 80), description: short(o.description, 200) })),
     }));
-    return { kind: 'question', title: questions.length > 1 ? 'Te hace unas preguntas' : 'Te pregunta', questions };
+    return { kind: 'question', titleKey: questions.length > 1 ? 'asks_questions' : 'asks_question', questions };
   }
-  if (tool === 'ExitPlanMode') return { kind: 'plan', title: 'Quiere tu visto bueno al plan', detail: short(input.plan, 3000) };
-  const what = /^(Bash|PowerShell)$/.test(t) ? ['Ejecutar un comando', input.command]
-    : /^(Edit|MultiEdit|Write|NotebookEdit)$/.test(t) ? ['Editar un archivo', input.file_path || input.notebook_path]
-    : /^(Read)$/.test(t) ? ['Leer un archivo', input.file_path]
-    : /^(WebFetch)$/.test(t) ? ['Abrir una web', input.url]
-    : /^(WebSearch)$/.test(t) ? ['Buscar en la web', input.query]
-    : [`Usar ${t}`, input.description || JSON.stringify(input)];
-  return { kind: 'permission', title: what[0], detail: short(what[1] || ''), tool: t, canAlways: Array.isArray(suggestions) && suggestions.length > 0 };
+  if (tool === 'ExitPlanMode') return { kind: 'plan', titleKey: 'wants_plan_approval', detail: short(input.plan, 3000) };
+  const what = /^(Bash|PowerShell)$/.test(t) ? ['run_command', input.command]
+    : /^(Edit|MultiEdit|Write|NotebookEdit)$/.test(t) ? ['edit_file', input.file_path || input.notebook_path]
+    : /^(Read)$/.test(t) ? ['read_file', input.file_path]
+    : /^(WebFetch)$/.test(t) ? ['open_website', input.url]
+    : /^(WebSearch)$/.test(t) ? ['search_web', input.query]
+    : ['use_tool', input.description || JSON.stringify(input)];
+  return { kind: 'permission', titleKey: what[0], titleParams: { tool: t }, detail: short(what[1] || ''), tool: t, canAlways: Array.isArray(suggestions) && suggestions.length > 0 };
 }
 
 // choice: { behavior: 'allow' | 'deny', always?, answers? } -> objeto "decision" del hook, o null si no vale
 function decide(p, choice = {}) {
   if (choice.behavior === 'deny') {
-    return { behavior: 'deny', message: p.tool === 'ExitPlanMode' ? 'El usuario quiere que sigas planificando.' : 'El usuario lo ha denegado desde Notch Pet.' };
+    return { behavior: 'deny', message: p.tool === 'ExitPlanMode' ? 'The user wants you to keep planning.' : 'The user denied this from Notch Pet.' };
   }
   if (choice.behavior !== 'allow') return null;
   if (p.tool === 'AskUserQuestion') {
@@ -59,12 +59,12 @@ if (require.main === module) {
   assert.strictEqual(decide(ask, { behavior: 'allow', answers: {} }), null, 'sin contestar no vale');
   assert.deepStrictEqual(decide(ask, { behavior: 'allow', answers: { '¿Qué base de datos?': 'Postgres', 'inventada': 'x' } }).updatedInput.answers, { '¿Qué base de datos?': 'Postgres' });
   const bash = { tool: 'Bash', input: { command: 'npm test' }, suggestions: [{ type: 'addRules' }] };
-  assert.deepStrictEqual(summarize(bash.tool, bash.input, bash.suggestions), { kind: 'permission', title: 'Ejecutar un comando', detail: 'npm test', tool: 'Bash', canAlways: true });
+  assert.deepStrictEqual(summarize(bash.tool, bash.input, bash.suggestions), { kind: 'permission', titleKey: 'run_command', titleParams: { tool: 'Bash' }, detail: 'npm test', tool: 'Bash', canAlways: true });
   assert.deepStrictEqual(decide(bash, { behavior: 'allow' }), { behavior: 'allow', updatedInput: { command: 'npm test' } });
   assert.strictEqual(decide(bash, { behavior: 'allow', always: true }).updatedPermissions.length, 1);
   assert.strictEqual(decide(bash, { behavior: 'deny' }).behavior, 'deny');
   assert.strictEqual(decide(bash, { behavior: 'loquesea' }), null);
   assert.strictEqual(fingerprint('AskUserQuestion', { questions: [1] }), fingerprint('AskUserQuestion', { questions: [1], answers: { a: 1 } }));
-  assert.strictEqual(summarize('mcp__srv__do_thing', { description: 'hola' }).title, 'Usar do_thing');
+  assert.strictEqual(summarize('mcp__srv__do_thing', { description: 'hola' }).titleParams.tool, 'do_thing');
   console.log('asks.js ok');
 }

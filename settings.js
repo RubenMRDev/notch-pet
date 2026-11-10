@@ -1,7 +1,9 @@
 // Ventana de ajustes: navegacion por apartados, vista previa de la mascota y todas las opciones.
-(() => {
+(async () => {
   const { api } = window;
-  const { PET, ICON, esc, fileUrl } = window.NP;
+  const { PET, ICON, esc, fileUrl, t, tn } = window.NP;
+  const locale = await api.invoke('i18n:get').catch(() => null);
+  window.NP.setLocale(locale);
   const $ = id => document.getElementById(id);
   const clean = err => String(err?.message || err).replace(/^.*?Error: /, '');
   let cfg = null;
@@ -30,7 +32,7 @@
 
   // ---------- Aplicar la config a la pantalla ----------
   const SWITCHES = ['sound', 'notify', 'dnd', 'hideFullscreen', 'autostart'];
-  const SELECTS = ['finishAlert', 'maxSessions', 'openWith', 'display'];
+  const SELECTS = ['finishAlert', 'maxSessions', 'openWith', 'display', 'lang'];
   function apply(c) {
     if (!c) return;
     const root = document.documentElement;
@@ -50,11 +52,11 @@
     for (const k of SWITCHES) $(k).checked = !!c[k];
     for (const k of SELECTS) $(k).value = String(c[k]);
     renderKeys(c.shortcut);
-    if (c.shortcutOk === false) { $('shortcutMsg').className = 'msg err'; $('shortcutMsg').textContent = `Otra aplicación ya usa ${pretty(c.shortcut)}. Elige otra combinación.`; }
+    if (c.shortcutOk === false) { $('shortcutMsg').className = 'msg err'; $('shortcutMsg').textContent = t('another_app_uses_shortcut', { shortcut: pretty(c.shortcut) }); }
   }
 
   // ---------- Vista previa ----------
-  const LABELS = { sleep: 'Zzz…', idle: 'Tranquila', bored: 'Me aburro…', working: 'Trabajando', waiting: 'Te necesita', impatient: 'Lleva 6 min esperando', happy: '¡Listo!' };
+  const LABELS = { sleep: t('zzz'), idle: t('calm'), bored: t('bored'), working: t('working'), waiting: t('needs_you'), impatient: t('waiting_for_minutes', { n: 6 }), happy: t('ready') };
   const FX = { sleep: 'z', bored: '…', waiting: '!', impatient: '!!' };
   let mood = 'sleep', tool = '';
   function renderMock() {
@@ -78,9 +80,9 @@
   $('testNotch').onclick = () => api.send('test-mood', { mood: mood === 'impatient' ? 'waiting' : mood, impatient: mood === 'impatient', tool: mood === 'working' ? tool : '' });
 
   // ---------- Aspectos ----------
-  const SKINS = [['blob', 'Gota'], ['cat', 'Gato'], ['ghost', 'Fantasma'], ['robot', 'Robot'], ['image', 'Imagen']];
+  const SKINS = [['blob', t('blob')], ['cat', t('cat')], ['ghost', t('ghost')], ['robot', t('robot')], ['image', t('image')]];
   $('skins').innerHTML = SKINS.map(([k, name]) =>
-    `<button class="skin" role="radio" data-skin="${k}" aria-checked="false"><span class="tile idle">${PET}</span>${name}</button>`).join('');
+    `<button class="skin" role="radio" data-skin="${k}" aria-checked="false"><span class="tile idle">${PET}</span>${esc(name)}</button>`).join('');
   $('skins').addEventListener('click', async e => {
     const b = e.target.closest('.skin'); if (!b) return;
     if (b.dataset.skin === 'image' && (!cfg.customImage || b.getAttribute('aria-checked') === 'true')) {
@@ -94,11 +96,11 @@
   $('styles').addEventListener('click', e => { const b = e.target.closest('button'); if (b) save({ style: b.dataset.style }, $('skinMsg')); });
 
   // ---------- Colores ----------
-  const COLORS = [['pet', 'Mascota', 'El color de su cuerpo.'], ['bg', 'Fondo del notch', 'La pastilla de arriba.'],
-    ['work', 'Trabajando', 'Indicador de las sesiones en marcha.'], ['wait', 'Te necesita', 'Cuando una sesión pide permiso.'],
-    ['done', 'Terminada', 'Cuando una sesión acaba.']];
+  const COLORS = [['pet', t('pet'), t('pet_color_description')], ['bg', t('notch_background'), t('notch_background_description')],
+    ['work', t('working'), t('working_color_description')], ['wait', t('needs_you'), t('waiting_color_description')],
+    ['done', t('finished'), t('finished_color_description')]];
   $('colors').innerHTML = COLORS.map(([k, name, hint]) =>
-    `<div class="row"><label for="c-${k}">${name}<small>${hint}</small></label><span class="swatch"><input type="color" id="c-${k}" data-key="${k}"><code></code></span></div>`).join('');
+    `<div class="row"><label for="c-${k}">${esc(name)}<small>${esc(hint)}</small></label><span class="swatch"><input type="color" id="c-${k}" data-key="${k}"><code></code></span></div>`).join('');
   let colorTimer;
   $('colors').addEventListener('input', e => {
     const k = e.target.dataset.key; if (!k) return;
@@ -115,11 +117,11 @@
   $('testAlert').onclick = () => api.send('test-alert');
 
   // ---------- Atajo: se graba pulsando la combinacion ----------
-  const pretty = acc => (acc || '').split('+').map(p => ({ CommandOrControl: 'Ctrl', Super: 'Win', Space: 'Espacio' }[p] || p)).join(' + ');
+  const pretty = acc => (acc || '').split('+').map(p => ({ CommandOrControl: 'Ctrl', Super: 'Win', Space: t('space_key') }[p] || p)).join(' + ');
   function renderKeys(acc) {
     if ($('shortcut').classList.contains('recording')) return;
-    $('shortcut').innerHTML = acc ? pretty(acc).split(' + ').map(k => `<kbd>${esc(k)}</kbd>`).join('') : 'Sin atajo';
-    $('shortcut').setAttribute('aria-label', `Atajo: ${pretty(acc) || 'ninguno'}. Pulsa para cambiarlo.`);
+    $('shortcut').innerHTML = acc ? pretty(acc).split(' + ').map(k => `<kbd>${esc(k)}</kbd>`).join('') : esc(t('no_shortcut'));
+    $('shortcut').setAttribute('aria-label', t('shortcut_aria', { shortcut: pretty(acc) || t('none') }));
   }
   const CODES = { Space: 'Space', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Enter: 'Enter',
     Minus: '-', Equal: '=', Comma: ',', Period: '.', Slash: '/', Semicolon: ';', BracketLeft: '[', BracketRight: ']', Backquote: '`' };
@@ -132,7 +134,7 @@
     return mods.length || /^F\d+$/.test(key) ? [...mods, key].join('+') : 'needmod';
   }
   const sc = $('shortcut'), scMsg = $('shortcutMsg');
-  sc.onclick = () => { sc.classList.add('recording'); sc.textContent = 'Pulsa la combinación… (Esc para cancelar)'; scMsg.textContent = ''; };
+  sc.onclick = () => { sc.classList.add('recording'); sc.textContent = t('press_combination'); scMsg.textContent = ''; };
   sc.addEventListener('blur', () => { sc.classList.remove('recording'); renderKeys(cfg.shortcut); });
   sc.addEventListener('keydown', async e => {
     if (!sc.classList.contains('recording')) return;
@@ -140,20 +142,20 @@
     if (e.key === 'Escape') return sc.blur();
     const acc = accel(e);
     if (!acc) return;
-    if (acc === 'needmod') { scMsg.className = 'msg err'; scMsg.textContent = 'Usa al menos Ctrl, Alt o Win con la tecla.'; return; }
+    if (acc === 'needmod') { scMsg.className = 'msg err'; scMsg.textContent = t('shortcut_needs_modifier'); return; }
     sc.classList.remove('recording');
-    if (await save({ shortcut: acc }, scMsg)) { scMsg.className = 'msg ok'; scMsg.textContent = `Listo: ${pretty(acc)}.`; }
+    if (await save({ shortcut: acc }, scMsg)) { scMsg.className = 'msg ok'; scMsg.textContent = t('shortcut_saved', { shortcut: pretty(acc) }); }
     sc.blur();
   });
 
   // ---------- Hooks ----------
   function renderHooks(s) {
     const n = s.installed.length, all = n === s.events.length;
-    const state = s.outdated ? ['part', 'Ruta antigua'] : all ? ['on', 'Conectada'] : n ? ['part', `Parcial · ${n}/${s.events.length}`] : ['', 'Sin conectar'];
+    const state = s.outdated ? ['part', t('old_path')] : all ? ['on', t('connected')] : n ? ['part', t('partial', { n, total: s.events.length })] : ['', t('not_connected')];
     $('badge').className = `badge ${state[0]}`; $('badge').textContent = state[1];
     $('hookPath').textContent = s.file;
     $('events').innerHTML = s.events.map(ev => `<span class="ev ${s.installed.includes(ev) ? 'on' : ''}">${ev}</span>`).join('');
-    $('install').textContent = s.outdated ? 'Actualizar hooks' : n && !all ? 'Completar hooks' : 'Instalar hooks';
+    $('install').textContent = t(s.outdated ? 'update_hooks' : n && !all ? 'complete_hooks' : 'install_hooks');
     $('install').disabled = all && !s.outdated;
     $('uninstall').disabled = !n;
     $('navdot').classList.toggle('on', !all || s.outdated);
@@ -161,33 +163,33 @@
   async function hookAction(name, okText) {
     const msg = $('hookMsg');
     try { renderHooks(await api.invoke(`hooks:${name}`)); msg.className = 'msg ok'; msg.textContent = okText; }
-    catch (err) { msg.className = 'msg err'; msg.textContent = `No se pudo: ${clean(err)}`; }
+    catch (err) { msg.className = 'msg err'; msg.textContent = t('could_not', { error: clean(err) }); }
   }
-  $('install').onclick = () => hookAction('install', 'Hooks instalados. Las sesiones nuevas ya avisan a la mascota.');
-  $('uninstall').onclick = () => hookAction('uninstall', 'Hooks quitados. La mascota seguirá viendo tus sesiones, con algo menos de detalle.');
+  $('install').onclick = () => hookAction('install', t('hooks_installed'));
+  $('uninstall').onclick = () => hookAction('uninstall', t('hooks_removed'));
 
   // ---------- Actualizaciones ----------
   const mb = b => (b ? `${Math.round(b / 1048576)} MB` : '');
   function renderUpdate(u) {
     const text = $('updText'), btn = $('updBtn'), bar = $('updBar');
-    const show = (label, cls = '') => { btn.hidden = !label; btn.textContent = label || ''; btn.className = `btn ${cls}`; btn.disabled = false; };
+    const show = (action, cls = '') => { btn.hidden = !action; btn.dataset.action = action; btn.textContent = action ? t(action) : ''; btn.className = `btn ${cls}`; btn.disabled = false; };
     bar.hidden = u.state !== 'downloading';
     switch (u.state) {
-      case 'dev': text.textContent = 'Esta copia se ejecuta desde el código: las actualizaciones solo funcionan con la app instalada.'; show(''); break;
-      case 'checking': case 'idle': text.textContent = 'Comprobando si hay una versión nueva…'; show(''); break;
-      case 'none': text.textContent = `Tienes la última versión (${u.current}).`; show('Buscar ahora'); break;
-      case 'available': text.textContent = `Hay una versión nueva: ${u.version}${u.size ? ` · ${mb(u.size)}` : ''}. Tienes la ${u.current}.`; show('Descargar'); break;
-      case 'downloading': text.textContent = `Descargando la ${u.version}… ${u.percent || 0} %`; bar.style.setProperty('--p', (u.percent || 0) / 100); show(''); break;
-      case 'ready': text.textContent = `La ${u.version} está lista. Se instala al reiniciar y la mascota vuelve sola.`; show('Reiniciar y actualizar', 'update-ready'); break;
-      case 'error': text.textContent = `No se pudo comprobar: ${u.message}`; show('Reintentar'); break;
+      case 'dev': text.textContent = t('dev_build_updates'); show(''); break;
+      case 'checking': case 'idle': text.textContent = t('checking_new_version'); show(''); break;
+      case 'none': text.textContent = t('latest_version', { version: u.current }); show('check_now'); break;
+      case 'available': text.textContent = t('new_version', { version: u.version, size: u.size ? ` · ${mb(u.size)}` : '', current: u.current }); show('download'); break;
+      case 'downloading': text.textContent = t('downloading', { version: u.version, percent: u.percent || 0 }); bar.style.setProperty('--p', (u.percent || 0) / 100); show(''); break;
+      case 'ready': text.textContent = t('update_ready', { version: u.version }); show('restart_and_update', 'update-ready'); break;
+      case 'error': text.textContent = t('check_failed', { error: u.message }); show('retry'); break;
     }
-    $('version').textContent = `Versión ${u.current}`;
+    $('version').textContent = t('version_number', { version: u.current });
   }
   $('updBtn').onclick = () => {
-    const s = $('updBtn').textContent;
+    const s = $('updBtn').dataset.action;
     $('updBtn').disabled = true;
-    if (s === 'Descargar') api.invoke('update:download');
-    else if (s === 'Reiniciar y actualizar') api.send('update:install');
+    if (s === 'download') api.invoke('update:download');
+    else if (s === 'restart_and_update') api.send('update:install');
     else api.invoke('update:check');
   };
   api.on('update', renderUpdate);
@@ -201,15 +203,17 @@
   (async () => {
     try {
       const [displays, info] = await Promise.all([api.invoke('displays'), api.invoke('app:info')]);
-      $('display').innerHTML = '<option value="primary">La principal</option><option value="follow">La que tenga el ratón</option>'
+      $('lang').innerHTML = `<option value="auto">${esc(t('system_language'))}</option>`
+        + (locale?.names || []).map(l => `<option value="${esc(l.code)}">${esc(l.name)}</option>`).join('');
+      $('display').innerHTML = `<option value="primary">${esc(t('primary_display'))}</option><option value="follow">${esc(t('mouse_display'))}</option>`
         + displays.map(d => `<option value="${esc(d.id)}">${esc(d.label)}</option>`).join('');
-      $('version').textContent = `Versión ${info.version}`;
+      $('version').textContent = t('version_number', { version: info.version });
       $('about').textContent = `Notch Pet ${info.version} · Electron ${info.electron}`;
       $('dataPath').textContent = info.data;
       cfg = await api.invoke('config:get');
       apply(cfg);
-    } catch (err) { document.body.insertAdjacentHTML('afterbegin', `<p class="msg err">No se pudieron cargar los ajustes: ${esc(clean(err))}</p>`); }
+    } catch (err) { document.body.insertAdjacentHTML('afterbegin', `<p class="msg err">${esc(t('settings_load_failed', { error: clean(err) }))}</p>`); }
     try { renderHooks(await api.invoke('hooks:status')); }
-    catch (err) { $('hookMsg').className = 'msg err'; $('hookMsg').textContent = `No se pudo leer tu settings.json: ${clean(err)}`; }
+    catch (err) { $('hookMsg').className = 'msg err'; $('hookMsg').textContent = t('settings_json_read_failed', { error: clean(err) }); }
   })();
 })();

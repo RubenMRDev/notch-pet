@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:">
@@ -8,25 +8,26 @@
 <link rel="stylesheet" href="settings.css">
 </head>
 <body>
+  <!-- Los textos salen de locales/<idioma>.json: data-t, data-t-html, data-t-aria y data-t-placeholder (shared.js) -->
   <aside class="side">
     <div class="brand">
       <div class="brand-pet idle" id="brandPet"></div>
       <div><b>Notch Pet</b><span id="version"></span></div>
     </div>
-    <nav id="nav" aria-label="Apartados">
-      <a href="#mascota" data-page="mascota"><span data-icon="pet"></span>Mascota</a>
-      <a href="#avisos" data-page="avisos"><span data-icon="bell"></span>Avisos</a>
-      <a href="#notch" data-page="notch"><span data-icon="notch"></span>Notch</a>
-      <a href="#claude" data-page="claude"><span data-icon="plug"></span>Conexión con Claude<i class="navdot" id="navdot"></i></a>
-      <a href="#general" data-page="general"><span data-icon="gear"></span>General</a>
+    <nav id="nav" data-t-aria="sections">
+      <a href="#mascota" data-page="mascota"><span data-icon="pet"></span><span data-t="pet"></span></a>
+      <a href="#avisos" data-page="avisos"><span data-icon="bell"></span><span data-t="alerts"></span></a>
+      <a href="#notch" data-page="notch"><span data-icon="notch"></span><span data-t="notch"></span></a>
+      <a href="#claude" data-page="claude"><span data-icon="plug"></span><span data-t="claude_connection"></span><i class="navdot" id="navdot"></i></a>
+      <a href="#general" data-page="general"><span data-icon="gear"></span><span data-t="general"></span></a>
     </nav>
   </aside>
 
   <main id="content">
     <!-- Mascota -->
     <section class="page" data-page="mascota">
-      <h1>Mascota</h1>
-      <p class="lead">Cómo se ve y cómo reacciona a lo que hace Claude.</p>
+      <h1 data-t="pet"></h1>
+      <p class="lead" data-t="pet_lead"></p>
 
       <div class="preview">
         <div class="stage">
@@ -35,65 +36,65 @@
             <div class="mock sleep" id="mock"><div id="mockPet"></div><b id="mockLabel">Zzz…</b></div>
           </div>
         </div>
-        <div class="seg" id="moods" role="group" aria-label="Humor de la vista previa">
-          <button data-mood="sleep" aria-pressed="true">Durmiendo</button>
-          <button data-mood="idle">Tranquila</button>
-          <button data-mood="bored">Aburrida</button>
-          <button data-mood="working">Trabajando</button>
-          <button data-mood="waiting">Te necesita</button>
-          <button data-mood="impatient">Impaciente</button>
-          <button data-mood="happy">Contenta</button>
+        <div class="seg" id="moods" role="group" data-t-aria="preview_mood">
+          <button data-mood="sleep" aria-pressed="true" data-t="sleeping"></button>
+          <button data-mood="idle" data-t="calm"></button>
+          <button data-mood="bored" data-t="bored_mood"></button>
+          <button data-mood="working" data-t="working"></button>
+          <button data-mood="waiting" data-t="needs_you"></button>
+          <button data-mood="impatient" data-t="impatient"></button>
+          <button data-mood="happy" data-t="happy"></button>
         </div>
-        <div class="seg sub" id="tools" role="group" aria-label="Herramienta" hidden>
-          <button data-tool="" aria-pressed="true">Pensando</button>
-          <button data-tool="read">Leyendo</button>
-          <button data-tool="edit">Editando</button>
-          <button data-tool="term">Terminal</button>
-          <button data-tool="web">Web</button>
+        <div class="seg sub" id="tools" role="group" data-t-aria="tool" hidden>
+          <button data-tool="" aria-pressed="true" data-t="thinking"></button>
+          <button data-tool="read" data-t="reading"></button>
+          <button data-tool="edit" data-t="editing"></button>
+          <button data-tool="term" data-t="terminal"></button>
+          <button data-tool="web" data-t="web"></button>
         </div>
-        <div class="preview-foot"><button class="btn" id="testNotch"><span data-icon="play"></span>Probar en el notch</button></div>
+        <div class="preview-foot"><button class="btn" id="testNotch"><span data-icon="play"></span><span data-t="try_in_notch"></span></button></div>
       </div>
 
-      <h2>Aspecto</h2>
-      <div class="seg flat" id="styles" role="radiogroup" aria-label="Estilo de dibujo">
-        <button data-style="smooth" role="radio" aria-pressed="true">Suave</button>
-        <button data-style="pixel" role="radio" aria-pressed="false">8 bits</button>
+      <h2 data-t="appearance"></h2>
+      <div class="seg flat" id="styles" role="radiogroup" data-t-aria="drawing_style">
+        <button data-style="smooth" role="radio" aria-pressed="true" data-t="smooth"></button>
+        <button data-style="pixel" role="radio" aria-pressed="false" data-t="eight_bit"></button>
       </div>
-      <div class="skins" id="skins" role="radiogroup" aria-label="Aspecto de la mascota"></div>
+      <div class="skins" id="skins" role="radiogroup" data-t-aria="pet_appearance"></div>
       <p class="msg" id="skinMsg" aria-live="polite"></p>
-      <p class="note">Para la imagen propia sirve un PNG, GIF animado o WebP con fondo transparente, por ejemplo un fotograma exportado desde Blender.</p>
+      <p class="note" data-t="custom_image_note"></p>
 
-      <h2>Colores</h2>
+      <h2 data-t="colors"></h2>
       <div class="group" id="colors"></div>
-      <div class="actions"><button class="btn ghost" id="reset"><span data-icon="reset"></span>Restablecer colores</button></div>
+      <div class="actions"><button class="btn ghost" id="reset"><span data-icon="reset"></span><span data-t="reset_colors"></span></button></div>
     </section>
 
     <!-- Avisos -->
     <section class="page" data-page="avisos">
-      <h1>Avisos</h1>
-      <p class="lead">Cuándo y cómo te avisa la mascota.</p>
+      <h1 data-t="alerts"></h1>
+      <p class="lead" data-t="alerts_lead"></p>
       <div class="group">
-        <div class="row"><label for="sound">Sonido<small>Unas notas cortas al pedir permiso o al terminar.</small></label><input type="checkbox" class="switch" id="sound"></div>
-        <div class="row"><label for="notify">Notificación de Windows<small>Cuando una sesión pide permiso. Al pincharla, se abre la sesión.</small></label><input type="checkbox" class="switch" id="notify"></div>
-        <div class="row"><label for="finishAlert">Al terminar una sesión<small>El notch se despliega unos segundos con su resumen.</small></label>
-          <select id="finishAlert"><option value="multi">Si hay otra trabajando</option><option value="always">Siempre</option><option value="off">Nunca</option></select></div>
-        <div class="row"><label for="dnd">No molestar<small>Silencia todo lo anterior. También desde el icono de la bandeja.</small></label><input type="checkbox" class="switch" id="dnd"></div>
+        <div class="row"><label for="sound"><span data-t="sound"></span><small data-t="sound_description"></small></label><input type="checkbox" class="switch" id="sound"></div>
+        <div class="row"><label for="notify"><span data-t="windows_notification"></span><small data-t="windows_notification_description"></small></label><input type="checkbox" class="switch" id="notify"></div>
+        <div class="row"><label for="finishAlert"><span data-t="when_session_finishes"></span><small data-t="finish_card_description"></small></label>
+          <select id="finishAlert"><option value="multi" data-t="if_another_working"></option><option value="always" data-t="always"></option><option value="off" data-t="never"></option></select></div>
+        <div class="row"><label for="dnd"><span data-t="do_not_disturb"></span><small data-t="dnd_description"></small></label><input type="checkbox" class="switch" id="dnd"></div>
       </div>
-      <div class="actions"><button class="btn" id="testAlert"><span data-icon="bell"></span>Probar aviso</button></div>
+      <div class="actions"><button class="btn" id="testAlert"><span data-icon="bell"></span><span data-t="test_alert"></span></button></div>
     </section>
 
     <!-- Notch -->
     <section class="page" data-page="notch">
-      <h1>Notch</h1>
-      <p class="lead">Dónde aparece y qué te enseña.</p>
+      <h1 data-t="notch"></h1>
+      <p class="lead" data-t="notch_lead"></p>
       <div class="group">
-        <div class="row"><label for="maxSessions">Sesiones que se ven<small>Las más recientes, aunque sean de hace días.</small></label>
+        <div class="row"><label for="maxSessions"><span data-t="visible_sessions"></span><small data-t="visible_sessions_description"></small></label>
           <select id="maxSessions"><option value="1">1</option><option value="3">3</option><option value="5">5</option><option value="8">8</option><option value="10">10</option></select></div>
-        <div class="row"><label for="openWith">Al abrir una sesión<small>Lo que hace el botón de abrir de cada sesión.</small></label>
-          <select id="openWith"><option value="claude">Abrirla en la app de Claude</option><option value="code">Abrir su carpeta en VS Code</option><option value="terminal">Abrir su carpeta en la terminal</option><option value="explorer">Abrir su carpeta en el Explorador</option></select></div>
-        <div class="row"><label for="display">Pantalla<small>Dónde aparece la mascota.</small></label><select id="display"></select></div>
-        <div class="row"><label for="hideFullscreen">Esconder en pantalla completa<small>Juegos, vídeos y presentaciones.</small></label><input type="checkbox" class="switch" id="hideFullscreen"></div>
-        <div class="row"><label for="shortcut">Atajo para dejarlo abierto<small>Púlsalo otra vez para cerrarlo.</small></label>
+        <div class="row"><label for="openWith"><span data-t="on_open_session"></span><small data-t="open_button_description"></small></label>
+          <select id="openWith"><option value="claude" data-t="open_in_claude"></option><option value="code" data-t="open_in_vscode"></option><option value="terminal" data-t="open_in_terminal"></option><option value="explorer" data-t="open_in_explorer"></option></select></div>
+        <div class="row"><label for="display"><span data-t="display"></span><small data-t="display_description"></small></label><select id="display"></select></div>
+        <div class="row"><label for="hideFullscreen"><span data-t="hide_fullscreen"></span><small data-t="hide_fullscreen_description"></small></label><input type="checkbox" class="switch" id="hideFullscreen"></div>
+        <div class="row"><label for="shortcut"><span data-t="keep_open_shortcut"></span><small data-t="press_again_to_close"></small></label>
           <button class="keys" id="shortcut" aria-describedby="shortcutMsg"></button></div>
       </div>
       <p class="msg" id="shortcutMsg" aria-live="polite"></p>
@@ -101,39 +102,40 @@
 
     <!-- Claude -->
     <section class="page" data-page="claude">
-      <h1>Conexión con Claude</h1>
-      <p class="lead">La mascota ya ve tus sesiones de Claude Code leyendo tus conversaciones. Con los hooks, además, se entera al momento de cuándo una sesión te pide permiso.</p>
+      <h1 data-t="claude_connection"></h1>
+      <p class="lead" data-t="claude_lead"></p>
       <div class="group hooks">
         <div class="hookhead">
-          <div><b>Hooks de Claude Code</b><small id="hookPath"></small></div>
+          <div><b data-t="claude_code_hooks"></b><small id="hookPath"></small></div>
           <span class="badge" id="badge">…</span>
         </div>
         <div class="events" id="events"></div>
       </div>
       <div class="actions">
-        <button class="btn ghost" id="uninstall">Quitar hooks</button>
-        <button class="btn primary" id="install">Instalar hooks</button>
+        <button class="btn ghost" id="uninstall" data-t="remove_hooks"></button>
+        <button class="btn primary" id="install" data-t="install_hooks"></button>
       </div>
       <p class="msg" id="hookMsg" aria-live="polite"></p>
-      <p class="note">Solo se tocan las entradas de Notch Pet; tus otros hooks se quedan igual. Antes de escribir se guarda una copia en <code>settings.json.notch-pet.bak</code>. Si una sesión que ya estaba abierta no avisa, reiníciala.</p>
+      <p class="note" data-t-html="hooks_note"></p>
 
-      <h2>Escribir a una sesión desde el notch</h2>
-      <p class="note">Usa el comando <code>claude</code> de tu equipo. Si al enviar te dice que no tiene la sesión iniciada, abre una terminal, ejecuta <code>claude</code> y escribe <code>/login</code>. Lo que hagas desde el notch queda en la conversación, pero si la tienes abierta en la app de Claude no lo verás hasta reabrirla.</p>
+      <h2 data-t="write_from_notch"></h2>
+      <p class="note" data-t-html="write_from_notch_note"></p>
     </section>
 
     <!-- General -->
     <section class="page" data-page="general">
-      <h1>General</h1>
-      <p class="lead">Arranque, actualizaciones y datos.</p>
+      <h1 data-t="general"></h1>
+      <p class="lead" data-t="general_lead"></p>
       <div class="group">
-        <div class="row update-row"><span>Actualizaciones<small id="updText">Comprobando…</small>
+        <div class="row update-row"><span><span data-t="updates"></span><small id="updText" data-t="checking"></small>
             <span class="progress" id="updBar" hidden><i></i></span></span>
           <button class="btn" id="updBtn" hidden></button></div>
       </div>
       <div class="group">
-        <div class="row"><label for="autostart">Abrir al iniciar Windows<small>La mascota aparece sola al encender el ordenador.</small></label><input type="checkbox" class="switch" id="autostart"></div>
-        <div class="row"><span>Datos y registros<small id="dataPath"></small></span><button class="btn" id="openData"><span data-icon="folder"></span>Abrir carpeta</button></div>
-        <div class="row"><span>Versión<small id="about"></small></span><button class="btn ghost danger" id="quitApp">Salir de Notch Pet</button></div>
+        <div class="row"><label for="lang"><span data-t="language"></span><small data-t="language_description"></small></label><select id="lang"></select></div>
+        <div class="row"><label for="autostart"><span data-t="open_at_login"></span><small data-t="open_at_login_description"></small></label><input type="checkbox" class="switch" id="autostart"></div>
+        <div class="row"><span><span data-t="data_and_logs"></span><small id="dataPath"></small></span><button class="btn" id="openData"><span data-icon="folder"></span><span data-t="open_folder"></span></button></div>
+        <div class="row"><span><span data-t="version"></span><small id="about"></small></span><button class="btn ghost danger" id="quitApp" data-t="quit_app"></button></div>
       </div>
     </section>
   </main>

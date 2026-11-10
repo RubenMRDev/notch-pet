@@ -6,6 +6,7 @@ const { createHash } = require('crypto');
 const { createWriteStream, promises: fs } = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const { t } = require('./i18n');
 
 const REPO = 'https://github.com/RubenMRDev/notch-pet/releases';
 
@@ -29,13 +30,13 @@ let latest = null, downloaded = null;
 async function checkUpdate(net, current) {
   try {
     const res = await net.fetch(`${REPO}/latest/download/latest.yml`, { cache: 'no-store' });
-    if (res.status === 404) return { error: 'Aún no hay versiones publicadas con actualización automática' };
-    if (!res.ok) return { error: `GitHub respondió ${res.status}` };
+    if (res.status === 404) return { error: t('no_auto_update_versions') };
+    if (!res.ok) return { error: t('github_status', { status: res.status }) };
     latest = parseLatestYml(await res.text());
-    if (!latest) return { error: 'La información de la última versión no es válida' };
+    if (!latest) return { error: t('latest_invalid') };
     return { newer: isNewer(latest.version, current), version: latest.version, size: latest.size, downloaded: downloaded?.version === latest.version };
   } catch (e) {
-    return { error: `Sin conexión (${e.message})` };
+    return { error: t('offline', { error: e.message }) };
   }
 }
 
@@ -50,7 +51,7 @@ async function downloadUpdate(net, tempDir, current, onProgress) {
   const file = path.join(dir, target.path);
   try {
     const res = await net.fetch(`${REPO}/download/v${target.version}/${encodeURIComponent(target.path)}`);
-    if (!res.ok || !res.body) return { ok: false, error: `No se pudo descargar (${res.status})` };
+    if (!res.ok || !res.body) return { ok: false, error: t('download_failed_status', { status: res.status }) };
     const total = Number(res.headers.get('content-length')) || target.size || 0;
     const hash = createHash('sha512'), out = createWriteStream(file), reader = res.body.getReader();
     let received = 0, lastReport = 0;
@@ -67,18 +68,18 @@ async function downloadUpdate(net, tempDir, current, onProgress) {
     // La huella tiene que coincidir con la publicada: si no, el archivo no se usa
     if (hash.digest('base64') !== target.sha512) {
       await fs.rm(dir, { recursive: true, force: true });
-      return { ok: false, error: 'El archivo descargado no coincide con el publicado (se ha descartado)' };
+      return { ok: false, error: t('download_mismatch') };
     }
     downloaded = { version: target.version, file };
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: `La descarga falló (${e.message})` };
+    return { ok: false, error: t('download_failed', { error: e.message }) };
   }
 }
 
 // Lanza el instalador en silencio; el cierra lo que quede de Notch Pet, instala y la vuelve a abrir
 function launchInstaller() {
-  if (!downloaded) return { ok: false, error: 'No hay ninguna actualización descargada' };
+  if (!downloaded) return { ok: false, error: t('no_update_downloaded') };
   try {
     const child = spawn(downloaded.file, ['/S', '--updated', '--force-run'], { detached: true, stdio: 'ignore', windowsHide: true });
     child.on('error', () => {});
@@ -86,7 +87,7 @@ function launchInstaller() {
     return { ok: true };
   } catch (e) {
     downloaded = null;
-    return { ok: false, error: `No se pudo abrir el instalador (${e.message}). Vuelve a descargarlo.` };
+    return { ok: false, error: t('installer_failed', { error: e.message }) };
   }
 }
 

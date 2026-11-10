@@ -3,6 +3,7 @@
 const { app, BrowserWindow } = require('electron');
 const assert = require('assert');
 const path = require('path');
+const locale = lang => ({ lang, strings: require(path.join(__dirname, '..', 'locales', lang + '.json')) });
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
 let win, wc;
@@ -195,12 +196,32 @@ test('estilo 8 bits: cada aspecto tiene su dibujo en píxeles', async () => {
   }
 });
 
+test('cambia de idioma al momento (y los plurales de cada idioma)', async () => {
+  await emit('open', true);
+  await emit('i18n', locale('en'));
+  await state([mk(1, { status: 'working', tool: 'Read' }), mk(2)], { mood: 'working', stats: { done: 1, tools: 5, workMs: 60e3 } });
+  await settle();
+  assert.strictEqual(await js("document.getElementById('stats').textContent"), 'Today · 1 finished · 5 tools · 1 min working');
+  assert.strictEqual(await js("document.getElementById('title').textContent"), 'Working');
+  assert.match(await js("document.querySelector('.row[data-id=\"id-1\"] .detail')?.textContent || ''"), /Reading files/);
+  assert.strictEqual(await js("document.getElementById('gear').getAttribute('aria-label')"), 'Settings');
+  await emit('i18n', locale('ru'));
+  await settle();
+  assert.match(await js("document.getElementById('stats').textContent"), /5 инструментов/);
+  assert.strictEqual(await js('document.documentElement.lang'), 'ru');
+  await emit('i18n', locale('es'));
+  await state([]);
+  await settle();
+  assert.match(await js("document.querySelector('#list .empty')?.textContent || ''"), /Aún no hay sesiones/);
+});
+
 app.whenReady().then(async () => {
   win = new BrowserWindow({ width: 440, height: 460, show: false,
     webPreferences: { offscreen: true, preload: path.join(__dirname, 'preload-test.js'), contextIsolation: true, sandbox: true } });
   wc = win.webContents;
   wc.on('console-message', (_e, level, msg, line, src) => { if (level >= 3) errors.push(`${path.basename(src || '')}:${line} ${msg}`); });
   await win.loadFile(path.join(__dirname, '..', 'index.html'));
+  await emit('i18n', locale('es'));
   await js(`window.addEventListener('error', e => console.error('ERROR', e.message)); window.addEventListener('unhandledrejection', e => console.error('PROMESA', e.reason))`);
   let failed = 0;
   for (const t of tests) {

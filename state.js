@@ -26,9 +26,10 @@ function apply(sessions, e, now = Date.now()) {
   const s = old || { id, status: 'idle', detail: '', prompt: '', tool: '' };
   s.cwd = text(e.cwd) || s.cwd;
   s.at = now;
+  s.interrupted = false;
   switch (e.hook_event_name) {
     // Los avisos internos (tareas en segundo plano, comandos locales) no son peticiones tuyas.
-    case 'UserPromptSubmit': s.status = 'working'; if (!NOT_PROMPT.test(text(e.prompt))) s.prompt = text(e.prompt); s.detail = 'Pensando…'; s.tool = ''; break;
+    case 'UserPromptSubmit': s.status = 'working'; if (!NOT_PROMPT.test(text(e.prompt))) s.prompt = text(e.prompt); s.detail = ''; s.tool = ''; break;
     case 'PreToolUse': s.status = 'working'; s.detail = text(e.tool_name); s.tool = text(e.tool_name); break;
     case 'PostToolUse': s.status = 'working'; break;
     case 'Notification':
@@ -36,7 +37,7 @@ function apply(sessions, e, now = Date.now()) {
       if (s.status !== 'waiting') s.waitingSince = now;
       s.status = 'waiting'; s.detail = text(e.message);
       break;
-    case 'Stop': s.status = 'done'; s.detail = text(e.last_assistant_message) || 'Terminado'; s.tool = ''; break;
+    case 'Stop': s.status = 'done'; s.detail = text(e.last_assistant_message); s.tool = ''; break;
   }
   sessions.set(id, s);
   return prev;

@@ -35,8 +35,8 @@ function parseTail(lines) {
   const tool = Array.isArray(c) && c.find(x => x.type === 'tool_use');
   const interrupted = last.type === 'user' && INTERRUPTED.test(textOf(c));
   const s = ended || interrupted || (last.type === 'assistant' && !tool)
-    ? { status: interrupted ? 'idle' : 'done', detail: interrupted ? 'Interrumpida' : lastText || 'Terminado', tool: '' }
-    : { status: 'working', detail: tool ? tool.name : 'Pensando…', tool: tool ? tool.name : '' };
+    ? { status: interrupted ? 'idle' : 'done', detail: interrupted ? '' : lastText, tool: '', interrupted }
+    : { status: 'working', detail: tool ? tool.name : '', tool: tool ? tool.name : '', interrupted: false };
   return { cwd, title, prompt, ...s };
 }
 
@@ -82,7 +82,7 @@ if (require.main === module) {
   const L = o => JSON.stringify(o);
   const user = t => L({ type: 'user', cwd: 'C:/p', message: { content: t } });
   const done = parseTail([user('hola'), L({ type: 'assistant', message: { content: [{ type: 'text', text: 'listo' }] } }), L({ type: 'agent-name' })]);
-  assert.deepStrictEqual(done, { cwd: 'C:/p', title: '', prompt: 'hola', status: 'done', detail: 'listo', tool: '' });
+  assert.deepStrictEqual(done, { cwd: 'C:/p', title: '', prompt: 'hola', status: 'done', detail: 'listo', tool: '', interrupted: false });
   const say = t => L({ type: 'assistant', message: { content: [{ type: 'text', text: t }] } });
   // /login despues de terminar: no es una peticion, sigue terminada
   const login = parseTail([user('hola'), say('listo'), user('<command-name>/login</command-name>'), user('<local-command-stdout>Login successful</local-command-stdout>')]);
@@ -95,6 +95,7 @@ if (require.main === module) {
   assert.strictEqual(parseTail([user('a'), L({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Bash' }] } }), L({ type: 'system', subtype: 'stop_hook_summary' })]).status, 'done');
   // interrumpida con Esc
   assert.strictEqual(parseTail([user('a'), user('[Request interrupted by user]')]).status, 'idle');
+  assert.strictEqual(parseTail([user('a'), user('[Request interrupted by user]')]).interrupted, true);
   const busy = parseTail([user('haz x'), L({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Bash' }] } })]);
   assert.strictEqual(busy.status, 'working'); assert.strictEqual(busy.tool, 'Bash');
   const res = parseTail([user('pide'), L({ type: 'user', message: { content: [{ type: 'tool_result' }] } })]);

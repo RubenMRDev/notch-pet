@@ -1,7 +1,7 @@
 // El notch: barra con la mascota, lista de sesiones, tarjeta de "ha terminado" y caja para escribir a una sesion.
 (() => {
   const { api } = window;
-  const { PET, ICON, esc, fileUrl } = window.NP;
+  const { PET, ICON, esc, fileUrl, t, tn } = window.NP;
   const $ = id => document.getElementById(id);
   const shell = $('shell');
 
@@ -26,24 +26,24 @@
   const atts = new Map(); // sesion -> [{ media_type, data, url }] imagenes adjuntas al mensaje
 
   // ---------- Utilidades de texto ----------
-  const folder = p => (p || '').split(/[\\/]/).filter(Boolean).pop() || 'sesión';
+  const folder = p => (p || '').split(/[\\/]/).filter(Boolean).pop() || t('session');
   const nameOf = s => str(s?.title) || folder(str(s?.cwd));
   const mins = ms => Math.max(0, Math.round(ms / 60e3));
-  const ago = (now, t) => { const m = mins(now - t); return m < 1 ? 'ahora' : m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} d`; };
-  const dur = ms => { const m = mins(ms); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`; };
+  const ago = (now, at) => { const m = mins(now - at); return m < 1 ? t('now') : m < 60 ? t('minutes_short', { n: m }) : m < 1440 ? t('hours_short', { n: Math.round(m / 60) }) : t('days_short', { n: Math.round(m / 1440) }); };
+  const dur = ms => { const m = mins(ms); return m < 60 ? t('minutes_short', { n: m }) : t('hours_minutes_short', { h: Math.floor(m / 60), m: m % 60 }); };
   const count = (list, st) => list.filter(s => s.status === st).length;
   // Nombre de herramienta -> lo que esta haciendo, en cristiano. Solo para nombres exactos de herramienta.
-  const TOOL = [[/^(Read|LS|NotebookRead)$/, 'Leyendo archivos'], [/^(Grep|Glob)$/, 'Buscando en el código'],
-    [/^(Edit|MultiEdit|Write|NotebookEdit)$/, 'Editando archivos'], [/^(Bash|PowerShell)$/, 'Ejecutando comandos'],
-    [/^(WebFetch|WebSearch)$/, 'Buscando en la web'], [/^(Task|Agent)$/, 'Lanzando un agente'], [/^TodoWrite$/, 'Organizando tareas']];
+  const TOOL = [[/^(Read|LS|NotebookRead)$/, 'reading_files'], [/^(Grep|Glob)$/, 'searching_code'],
+    [/^(Edit|MultiEdit|Write|NotebookEdit)$/, 'editing_files'], [/^(Bash|PowerShell)$/, 'running_commands'],
+    [/^(WebFetch|WebSearch)$/, 'searching_web'], [/^(Task|Agent)$/, 'launching_agent'], [/^TodoWrite$/, 'organizing_tasks']];
   const toolName = t => str(t).replace(/^mcp__.+?__/, '');
-  const friendly = t => (TOOL.find(([re]) => re.test(toolName(t))) || [])[1] || toolName(t);
+  const friendly = tool => { const k = (TOOL.find(([re]) => re.test(toolName(tool))) || [])[1]; return k ? t(k) : toolName(tool); };
   // Primer parrafo del ultimo mensaje (los bloques de codigo se quedan en [código]).
-  const summary = t => {
-    const p = str(t).replace(/```[\s\S]*?```/g, '[código]').split(/\n\s*\n/).find(x => x.trim()) || '';
+  const summary = x => {
+    const p = str(x).replace(/```[\s\S]*?```/g, t('code_block')).split(/\n\s*\n/).find(x => x.trim()) || '';
     return p.length > 240 ? p.slice(0, 239) + '…' : p.trim();
   };
-  const plain = t => summary(t).replace(/[*_`#>]/g, '');
+  const plain = x => summary(x).replace(/[*_`#>]/g, '');
   // Markdown basico -> HTML. Primero se escapa todo: el texto de Claude nunca se interpreta como HTML.
   // ponytail: cubre lo que usa Claude (codigo, negrita, cursiva, titulos, listas, enlaces); sin tablas.
   function md(t) {
@@ -61,6 +61,9 @@
       .replace(/\*\*|`/g, '');
     return h.replace(/\u0000(\d+)\u0000/g, (_, i) => `<pre>${blocks[i]}</pre>`);
   }
+
+  // ---------- Idioma: al cambiarlo se repinta todo ----------
+  on('i18n', l => { window.NP.setLocale(l); lastHtml = ''; if (last) render(last); });
 
   // ---------- Config ----------
   on('config', c => {
@@ -91,22 +94,22 @@
   function header(st) {
     const { mood, sessions, impatient, now } = st;
     const first = status => sessions.find(s => s.status === status);
-    if (peekId) { const s = sessions.find(x => x.id === peekId); return [s?.asks?.length ? 'Te necesita' : 'Ha terminado', s ? nameOf(s) : '']; }
-    if (mood === 'waiting') { const s = first('waiting'); return [impatient ? `Lleva ${mins(now - s.waitingSince)} min esperando` : 'Te necesita', nameOf(s)]; }
-    if (mood === 'working') { const n = count(sessions, 'working'); return ['Trabajando', n > 1 ? `${n} sesiones` : nameOf(first('working'))]; }
-    if (mood === 'happy') { const s = first('done'); return ['¡Listo!', s ? nameOf(s) : '']; }
-    if (mood === 'idle') return ['Tranquila', ''];
-    if (mood === 'bored') return ['Me aburro…', ''];
-    return ['Zzz…', ''];
+    if (peekId) { const s = sessions.find(x => x.id === peekId); return [s?.asks?.length ? t('needs_you') : t('has_finished'), s ? nameOf(s) : '']; }
+    if (mood === 'waiting') { const s = first('waiting'); return [impatient ? t('waiting_for_minutes', { n: mins(now - s.waitingSince) }) : t('needs_you'), nameOf(s)]; }
+    if (mood === 'working') { const n = count(sessions, 'working'); return [t('working'), n > 1 ? tn('session_count', n) : nameOf(first('working'))]; }
+    if (mood === 'happy') { const s = first('done'); return [t('ready'), s ? nameOf(s) : '']; }
+    if (mood === 'idle') return [t('calm'), ''];
+    if (mood === 'bored') return [t('bored'), ''];
+    return [t('zzz'), ''];
   }
   function counters(sessions) {
     const w = count(sessions, 'working'), q = count(sessions, 'waiting');
-    return (q ? `<span class="cnt" title="${q} esperando tu permiso"><i class="pdot"></i>${q}</span>` : '')
-      + (w ? `<span class="cnt" title="${w} trabajando"><i class="spin"></i>${w}</span>` : '');
+    return (q ? `<span class="cnt" title="${esc(t('waiting_permission_count', { n: q }))}"><i class="pdot"></i>${q}</span>` : '')
+      + (w ? `<span class="cnt" title="${esc(t('working_count', { n: w }))}"><i class="spin"></i>${w}</span>` : '');
   }
 
   // ---------- Filas ----------
-  const BUSY = { working: 'Está trabajando: lo que escribas se enviará cuando termine.', waiting: 'Espera tu permiso: lo que escribas se enviará cuando termine.' };
+  const BUSY = { working: 'busy_working_queue', waiting: 'busy_waiting_queue' };
   const indicator = s => s.status === 'working' ? '<i class="spin"></i>' : s.status === 'waiting' ? '<i class="pdot"></i>'
     : s.status === 'done' ? `<span class="ok">${ICON.check}</span>` : '<i class="ring"></i>';
   // ---------- Lo que te pide la sesion: permiso, pregunta o plan ----------
@@ -122,66 +125,67 @@
           return `<button class="opt ${on ? 'on' : ''}" data-q="${qi}" data-label="${esc(o.label)}" ${o.description ? `title="${esc(o.description)}"` : ''}>${esc(o.label)}</button>`;
         }).join('');
         const own = typeof chosen === 'string' && !(q.options || []).some(o => o.label === chosen) ? chosen : '';
-        return `<div class="q"><p>${esc(q.question)}${q.multiSelect ? ' <span class="hintline">(puedes marcar varias)</span>' : ''}</p>
+        return `<div class="q"><p>${esc(q.question)}${q.multiSelect ? ` <span class="hintline">${esc(t('can_select_multiple'))}</span>` : ''}</p>
           <div class="opts">${opts}</div>
-          <input class="own" data-q="${qi}" placeholder="Otra respuesta…" value="${esc(own)}" maxlength="500" aria-label="Otra respuesta"></div>`;
+          <input class="own" data-q="${qi}" placeholder="${esc(t('other_answer'))}" value="${esc(own)}" maxlength="500" aria-label="${esc(t('other_answer'))}"></div>`;
       }).join('');
       const single = (a.questions || []).length === 1 && !a.questions[0].multiSelect;
       return `<div class="extra askbox" data-ask="${esc(a.id)}">${head}${qs}
-        <div class="ask-actions"><button class="abtn" data-act="deny">Saltar</button>${single ? '' : '<button class="abtn primary" data-act="answer">Responder</button>'}</div>${err(a)}</div>`;
+        <div class="ask-actions"><button class="abtn" data-act="deny">${esc(t('skip'))}</button>${single ? '' : `<button class="abtn primary" data-act="answer">${esc(t('answer'))}</button>`}</div>${err(a)}</div>`;
     }
     if (a.kind === 'plan') {
       return `<div class="extra askbox" data-ask="${esc(a.id)}">${head}<div class="plan">${md(a.detail)}</div>
-        <div class="ask-actions"><button class="abtn" data-act="deny">Seguir planificando</button><button class="abtn primary" data-act="allow">Aprobar plan</button></div>${err(a)}</div>`;
+        <div class="ask-actions"><button class="abtn" data-act="deny">${esc(t('keep_planning'))}</button><button class="abtn primary" data-act="allow">${esc(t('approve_plan'))}</button></div>${err(a)}</div>`;
     }
     return `<div class="extra askbox" data-ask="${esc(a.id)}">${head}${a.detail ? `<pre class="cmd">${esc(a.detail)}</pre>` : ''}
-      <div class="ask-actions"><button class="abtn" data-act="deny">Denegar</button>${a.canAlways ? '<button class="abtn" data-act="always">Permitir siempre</button>' : ''}<button class="abtn primary" data-act="allow">Permitir</button></div>${err(a)}</div>`;
+      <div class="ask-actions"><button class="abtn" data-act="deny">${esc(t('deny'))}</button>${a.canAlways ? `<button class="abtn" data-act="always">${esc(t('always_allow'))}</button>` : ''}<button class="abtn primary" data-act="allow">${esc(t('allow'))}</button></div>${err(a)}</div>`;
   }
 
   const attsHtml = id => (atts.get(id) || []).map((a, i) =>
-    `<span class="att"><img src="${a.url}" alt="Imagen adjunta ${i + 1}"><button class="att-x" data-i="${i}" aria-label="Quitar imagen ${i + 1}">${ICON.close}</button></span>`).join('');
+    `<span class="att"><img src="${a.url}" alt="${esc(t('attached_image', { n: i + 1 }))}"><button class="att-x" data-i="${i}" aria-label="${esc(t('remove_image', { n: i + 1 }))}">${ICON.close}</button></span>`).join('');
 
   function safeRow(s, now) {
     try { return rowHtml(s, now); } catch (e) {
       console.error(`notch: no se pudo pintar la sesión ${s?.id}: ${e?.stack || e}`);
       return `<li class="row ${esc(str(s?.status))}" data-id="${esc(str(s?.id))}"><span class="st"><i class="ring"></i></span>
-        <div class="main"><div class="top"><span class="name">${esc(nameOf(s) || 'Sesión')}</span></div><div class="detail">No se pudo mostrar esta sesión.</div></div>
-        <span class="ago"></span><button class="go" data-id="${esc(str(s?.id))}" aria-label="Abrir sesión">${ICON.open}</button></li>`;
+        <div class="main"><div class="top"><span class="name">${esc(nameOf(s) || t('session'))}</span></div><div class="detail">${esc(t('session_not_displayed'))}</div></div>
+        <span class="ago"></span><button class="go" data-id="${esc(str(s?.id))}" aria-label="${esc(t('open_session'))}">${ICON.open}</button></li>`;
     }
   }
   function rowHtml(s, now) {
     const isOpen = s.id === openId;
-    const raw = s.status === 'working' ? (s.tool ? friendly(s.tool) : toolName(s.detail) || 'Pensando…') : (str(s.detail) || str(s.prompt));
+    const raw = s.status === 'working' ? (s.tool ? friendly(s.tool) : toolName(s.detail) || t('thinking'))
+      : str(s.detail) || (s.interrupted ? t('interrupted') : s.status === 'done' ? t('done') : str(s.prompt));
     const asks = s.asks || [];
-    const busy = s.sending ? 'Enviando…' : BUSY[s.status] || '';
+    const busy = s.sending ? t('sending') : BUSY[s.status] ? t(BUSY[s.status]) : '';
     const queued = s.queued;
     const note = notes.get(s.id);
     const canMore = isOpen && summary(raw) !== raw.trim();
     return `
       <li class="row ${s.status} ${isOpen ? 'expanded' : ''}" data-id="${esc(s.id)}">
-        <span class="st" title="${esc({ working: 'Trabajando', waiting: 'Te necesita', done: 'Terminada', idle: 'En pausa' }[s.status] || '')}">${indicator(s)}</span>
+        <span class="st" title="${esc({ working: t('working'), waiting: t('needs_you'), done: t('finished'), idle: t('paused') }[s.status] || '')}">${indicator(s)}</span>
         <div class="main">
           <div class="top"><span class="name">${esc(nameOf(s))}</span>${s.title ? `<span class="where">${esc(folder(s.cwd))}</span>` : ''}</div>
           ${isOpen ? '' : `<div class="detail">${esc(plain(raw))}</div>`}
         </div>
         <span class="ago">${ago(now, s.at)}</span>
-        <button class="go" data-id="${esc(s.id)}" title="Abrir sesión" aria-label="Abrir ${esc(nameOf(s))}">${ICON.open}</button>
+        <button class="go" data-id="${esc(s.id)}" title="${esc(t('open_session'))}" aria-label="${esc(t('open_named', { name: nameOf(s) }))}">${ICON.open}</button>
         ${asks.map(askHtml).join('')}
         ${isOpen && !asks.length ? `
           ${s.prompt && s.status !== 'waiting' ? `<div class="extra ask">› ${esc(s.prompt)}</div>` : ''}
           <div class="extra detail">${md(full ? raw : summary(raw))}</div>
-          ${canMore ? `<button class="extra more">${full ? 'Ver resumen' : 'Ver todo'}</button>` : ''}
+          ${canMore ? `<button class="extra more">${esc(full ? t('show_summary') : t('show_all'))}</button>` : ''}
           <div class="extra compose">
             <div class="atts">${attsHtml(s.id)}</div>
             <div class="field">
-              <button class="clip" aria-label="Adjuntar imagen" title="Adjuntar imagen (también puedes pegarla o arrastrarla)">${ICON.image}</button>
-              <input type="text" class="msg-in" placeholder="Escríbele a esta sesión…" aria-label="Mensaje para ${esc(nameOf(s))}"
+              <button class="clip" aria-label="${esc(t('attach_image'))}" title="${esc(t('attach_image_tip'))}">${ICON.image}</button>
+              <input type="text" class="msg-in" placeholder="${esc(t('message_placeholder'))}" aria-label="${esc(t('message_for', { name: nameOf(s) }))}"
                 value="${esc(drafts.get(s.id) || '')}" maxlength="4000">
-              <button class="send" aria-label="${busy ? 'Enviar cuando termine' : 'Enviar'}" title="${busy ? 'Enviar cuando termine (Enter)' : 'Enviar (Enter)'}">${ICON.send}</button>
+              <button class="send" aria-label="${esc(busy ? t('send_when_done') : t('send'))}" title="${esc(busy ? t('send_when_done_enter') : t('send_enter'))}">${ICON.send}</button>
               <input type="file" class="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
             </div>
           </div>
-          ${queued ? `<div class="extra hint queued">En cola: «${esc(queued.text || 'imagen')}»${queued.images ? ` + ${queued.images} ${queued.images === 1 ? 'imagen' : 'imágenes'}` : ''}. Se enviará cuando termine. <button class="unqueue">Cancelar</button></div>`
+          ${queued ? `<div class="extra hint queued">${esc(t('queued_message', { text: queued.text || t('image'), images: queued.images ? tn('plus_images', queued.images) : '' }))} <button class="unqueue">${esc(t('cancel'))}</button></div>`
             : note ? `<div class="extra hint ${note.err ? 'err' : 'ok'}">${esc(note.text)}</div>` : busy ? `<div class="extra hint">${esc(busy)}</div>` : ''}` : ''}
       </li>`;
   }
@@ -252,7 +256,7 @@
       shown = shown.slice().sort((a, b) => pos(a) - pos(b));
     }
     const html = shown.length ? shown.map(s => safeRow(s, st.now)).join('')
-      : '<li class="empty"><b>Aún no hay sesiones</b>Abre una sesión de Claude Code y aparecerá aquí.</li>';
+      : `<li class="empty"><b>${esc(t('no_sessions_yet'))}</b>${esc(t('open_session_hint'))}</li>`;
     if (html !== lastHtml) {
       const keep = focusState();
       $('list').innerHTML = html;
@@ -260,7 +264,7 @@
       restoreFocus(keep);
     }
     const { done = 0, tools = 0, workMs = 0 } = st.stats || {};
-    $('stats').textContent = `Hoy · ${done} ${done === 1 ? 'terminada' : 'terminadas'} · ${tools} herramientas · ${dur(workMs)} trabajando`;
+    $('stats').textContent = [t('today'), tn('finished_count', done), tn('tool_count', tools), t('working_time', { time: dur(workMs) })].join(' · ');
     measure();
   }
   on('state', st => render(st, false));
@@ -288,10 +292,10 @@
     const a = s.asks?.[0];
     const what = !a ? '' : a.kind === 'question' ? a.questions[0]?.question : (a.detail || '').split('\n')[0];
     if (a) $('peekcard').innerHTML = `<div class="pk ask"><div class="top"><i class="pdot"></i><span class="name">${esc(nameOf(s))}</span></div>
-      <p><b>${esc(a.title)}</b>${what ? ` · ${esc(what)}` : ''}</p><small>Pasa el ratón para responder</small></div>`;
+      <p><b>${esc(a.title)}</b>${what ? ` · ${esc(what)}` : ''}</p><small>${esc(t('hover_to_answer'))}</small></div>`;
     else $('peekcard').innerHTML = `<div class="pk">
       <div class="top"><span class="ok">${ICON.check}</span><span class="name">${esc(nameOf(s))}</span>${s.title ? `<span class="where">${esc(folder(s.cwd))}</span>` : ''}</div>
-      <p>${esc(plain(s.detail))}</p><small>Pasa el ratón para verla y contestarle</small></div>`;
+      <p>${esc(plain(s.detail))}</p><small>${esc(t('hover_to_view_reply'))}</small></div>`;
     shell.classList.add('peek');
     if (last) render(last);
     requestAnimationFrame(() => {
@@ -351,7 +355,7 @@
     stopTyping();
     const r = await api.invoke('send', { id, text, images });
     notes.set(id, r.queued ? null : r.ok
-      ? { text: r.denied ? `Hecho. ${r.denied} ${r.denied === 1 ? 'acción necesitaba' : 'acciones necesitaban'} tu permiso y no se hizo.` : 'Hecho. La respuesta está arriba.' }
+      ? { text: r.denied ? tn('done_with_denials', r.denied) : t('done_reply_above') }
       : { text: r.error, err: true });
     if (!notes.get(id)) notes.delete(id);
     if (last) render(last);
@@ -436,9 +440,9 @@
   function addFiles(row, files) {
     const id = row.dataset.id, list = atts.get(id) || [];
     for (const f of files) {
-      if (list.length >= 4) { notes.set(id, { text: 'Como mucho 4 imágenes por mensaje.', err: true }); break; }
-      if (!OK_TYPES.includes(f.type)) { notes.set(id, { text: 'Solo imágenes PNG, JPG, GIF o WebP.', err: true }); continue; }
-      if (f.size > 5 * 1024 * 1024) { notes.set(id, { text: `«${f.name || 'La imagen'}» pesa más de 5 MB.`, err: true }); continue; }
+      if (list.length >= 4) { notes.set(id, { text: t('max_images', { n: 4 }), err: true }); break; }
+      if (!OK_TYPES.includes(f.type)) { notes.set(id, { text: t('image_types_only'), err: true }); continue; }
+      if (f.size > 5 * 1024 * 1024) { notes.set(id, { text: t('image_too_big', { name: f.name || t('image') }), err: true }); continue; }
       const reader = new FileReader();
       const entry = { media_type: f.type, data: '', url: '' };
       list.push(entry);

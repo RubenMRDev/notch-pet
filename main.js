@@ -10,6 +10,8 @@ const { watchFullscreen } = require('./fullscreen');
 const hooks = require('./hooks');
 const updater = require('./updater');
 const asks = require('./asks');
+const i18n = require('./i18n');
+const { t, tn } = i18n;
 const { randomUUID } = require('crypto');
 
 const PORT = 47321;
@@ -37,7 +39,7 @@ const DEFAULTS = {
   sound: true, notify: true, dnd: false,
   display: 'primary', hideFullscreen: true, visible: true,
   shortcut: 'CommandOrControl+Alt+N', openWith: 'claude',
-  maxSessions: 3, finishAlert: 'multi', firstRunDone: false,
+  maxSessions: 3, finishAlert: 'multi', firstRunDone: false, lang: 'auto',
 };
 const readJson = name => { try { return JSON.parse(fs.readFileSync(file(name), 'utf8')); } catch { return {}; } };
 const writeJson = (name, v) => { try { fs.writeFileSync(file(name), JSON.stringify(v, null, 2)); } catch (e) { log('error', `No se pudo guardar ${name}`, e); } };
@@ -54,7 +56,7 @@ const pending = new Map(); // id -> { id, session_id, tool, input, suggestions, 
 function push() {
   const v = view(sessions);
   for (const s of v.sessions) {
-    s.asks = [...pending.values()].filter(p => p.session_id === s.id).map(p => ({ id: p.id, ...p.summary }));
+    s.asks = [...pending.values()].filter(p => p.session_id === s.id).map(p => ({ id: p.id, ...p.summary, title: t(p.summary.titleKey, p.summary.titleParams) }));
     s.queued = s.queued ? { text: s.queued.text, images: s.queued.images.length } : null;
   }
   send('state', { ...v, ...testMood, stats, max: config.maxSessions });
@@ -65,6 +67,11 @@ function settle(p, decision = null) {
   try { if (!p.res.writableEnded) p.res.end(JSON.stringify({ decision })); } catch {}
 }
 const sendConfig = () => send('config', config);
+// Idioma: el elegido en Ajustes o el del sistema. Las ventanas reciben el diccionario (no pueden leer ficheros).
+function applyLang() {
+  i18n.setLang(i18n.resolve(config.lang, app.getLocale()));
+  send('i18n', i18n.current());
+}
 
 // Lee las conversaciones de ~/.claude/projects: asi ve tus ultimas sesiones aunque no tengas los hooks.
 // Solo pisa una sesion si su fichero es mas nuevo que lo ultimo que avisaron los hooks.
@@ -133,7 +140,7 @@ function createWindow() {
   win.setIgnoreMouseEvents(true);
   place();
   win.loadFile(path.join(__dirname, 'index.html'));
-  win.webContents.on('did-finish-load', () => { sendConfig(); push(); updateVisibility(); });
+  win.webContents.on('did-finish-load', () => { send('i18n', i18n.current()); sendConfig(); push(); updateVisibility(); });
 }
 
 function openSettings(page) {
@@ -159,13 +166,13 @@ function buildTray() {
     tray.on('click', () => openSettings());
   }
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: 'Ajustes', click: () => openSettings() },
-    { label: 'Mostrar notch', type: 'checkbox', checked: config.visible, click: m => setConfig({ visible: m.checked }) },
-    { label: 'No molestar', type: 'checkbox', checked: config.dnd, click: m => setConfig({ dnd: m.checked }) },
-    ...(update.state === 'ready' ? [{ type: 'separator' }, { label: `Reiniciar para actualizar a la ${update.version}`, click: installUpdate }]
-      : update.state === 'available' ? [{ type: 'separator' }, { label: `Hay una versión nueva (${update.version})`, click: () => openSettings('general') }] : []),
+    { label: t('settings'), click: () => openSettings() },
+    { label: t('show_notch'), type: 'checkbox', checked: config.visible, click: m => setConfig({ visible: m.checked }) },
+    { label: t('do_not_disturb'), type: 'checkbox', checked: config.dnd, click: m => setConfig({ dnd: m.checked }) },
+    ...(update.state === 'ready' ? [{ type: 'separator' }, { label: t('restart_to_update', { version: update.version }), click: installUpdate }]
+      : update.state === 'available' ? [{ type: 'separator' }, { label: t('new_version_available', { version: update.version }), click: () => openSettings('general') }] : []),
     { type: 'separator' },
-    { label: 'Salir de Notch Pet', click: () => app.quit() },
+    { label: t('quit_app'), click: () => app.quit() },
   ]));
 }
 
@@ -186,13 +193,14 @@ function setConfig(patch) {
   const { autostart, ...rest } = patch;
   if ('shortcut' in rest && !registerShortcut(rest.shortcut)) {
     registerShortcut(config.shortcut);
-    throw new Error(`No se pudo usar el atajo «${rest.shortcut}». Puede que otra app ya lo tenga.`);
+    throw new Error(t('shortcut_unavailable', { shortcut: rest.shortcut }));
   }
   if ('shortcut' in rest) shortcutOk = true;
   if ('maxSessions' in rest) rest.maxSessions = Math.min(10, Math.max(1, Number(rest.maxSessions) || 3));
   config = merge(config, rest);
   writeJson('config.json', config);
   if ('display' in rest) place();
+  if ('lang' in rest) { applyLang(); if (settingsWin && !settingsWin.isDestroyed()) setTimeout(() => settingsWin?.reload(), 50); }
   if ('maxSessions' in rest) { syncTranscripts(); push(); }
   if ('colors' in rest) tray?.setImage(nativeImage.createFromBuffer(petPng(32, config.colors.pet)));
   updateVisibility();
@@ -202,13 +210,13 @@ function setConfig(patch) {
 }
 
 // --- Avisos cuando una sesion pasa a pedir permiso ---
-const folder = p => (p || '').split(/[\\/]/).filter(Boolean).pop() || 'sesión';
+const folder = p => (p || '').split(/[\\/]/).filter(Boolean).pop() || t('session');
 const nameOf = s => s.title || folder(s.cwd);
 function alertWaiting(s) {
   if (config.dnd) return;
   if (config.sound) send('chime');
   if (config.notify && Notification.isSupported()) {
-    const n = new Notification({ title: `Claude te necesita · ${nameOf(s)}`, body: s.detail || 'Pide permiso para seguir.', silent: true });
+    const n = new Notification({ title: t('claude_needs_you', { name: nameOf(s) }), body: s.detail || t('asks_permission_to_continue'), silent: true });
     n.on('click', () => openSession(s));
     n.show();
   }
@@ -266,25 +274,26 @@ function sendToSession({ id, text, images } = {}) {
   return new Promise(resolve => {
     const s = sessions.get(id);
     const fail = error => { if (s) { s.sending = false; push(); } resolve({ ok: false, error }); };
-    if (!s || !SESSION_ID.test(id)) return fail('No encuentro esa sesión.');
+    if (!s || !SESSION_ID.test(id)) return fail(t('session_not_found'));
     text = String(text || '').trim();
     images = Array.isArray(images) ? images : [];
-    if (!text && !images.length) return fail('Escribe algo o adjunta una imagen antes de enviar.');
-    if (text.length > 4000) return fail('El mensaje es demasiado largo (máximo 4000 caracteres).');
-    if (images.length > 4) return fail('Como mucho 4 imágenes por mensaje.');
+    if (!text && !images.length) return fail(t('write_or_attach_first'));
+    if (text.length > 4000) return fail(t('message_too_long', { n: 4000 }));
+    if (images.length > 4) return fail(t('max_images', { n: 4 }));
     for (const im of images) {
-      if (!IMAGE_TYPES.includes(im?.media_type) || typeof im.data !== 'string' || !/^[A-Za-z0-9+/=]+$/.test(im.data)) return fail('Una de las imágenes no es válida (PNG, JPG, GIF o WebP).');
-      if (im.data.length * 0.75 > 5 * 1024 * 1024) return fail('Cada imagen puede pesar como mucho 5 MB.');
+      if (!IMAGE_TYPES.includes(im?.media_type) || typeof im.data !== 'string' || !/^[A-Za-z0-9+/=]+$/.test(im.data)) return fail(t('invalid_image'));
+      if (im.data.length * 0.75 > 5 * 1024 * 1024) return fail(t('image_max_5mb'));
     }
-    if (!s.cwd || !fs.existsSync(s.cwd)) return fail('La carpeta de la sesión ya no existe.');
+    if (!s.cwd || !fs.existsSync(s.cwd)) return fail(t('session_folder_missing'));
     // Ocupada: se guarda y sale sola en cuanto termine (flushQueue).
     if (s.sending || s.status === 'working' || s.status === 'waiting') { s.queued = { text, images }; push(); return resolve({ ok: true, queued: true }); }
 
-    const label = text || (images.length === 1 ? '[imagen]' : `[${images.length} imágenes]`);
-    Object.assign(s, { sending: true, status: 'working', prompt: label + (text && images.length ? ` · ${images.length} ${images.length === 1 ? 'imagen' : 'imágenes'}` : ''), detail: 'Pensando…', tool: '', at: Date.now() });
+    const n = images.length;
+    const label = text ? text + (n ? tn('plus_images', n) : '') : `[${t('image')}]` + (n > 1 ? tn('plus_images', n - 1) : '');
+    Object.assign(s, { sending: true, status: 'working', prompt: label, detail: '', tool: '', at: Date.now() });
     push();
     const content = [
-      ...(text ? [{ type: 'text', text }] : [{ type: 'text', text: 'Mira esta imagen.' }]),
+      ...(text ? [{ type: 'text', text }] : [{ type: 'text', text: 'Look at this image.' }]),
       ...images.map(im => ({ type: 'image', source: { type: 'base64', media_type: im.media_type, data: im.data } })),
     ];
     // ponytail: shell porque en Windows claude es un .cmd; los argumentos son fijos y el id ya esta validado.
@@ -294,7 +303,7 @@ function sendToSession({ id, text, images } = {}) {
     const timer = setTimeout(() => p.kill(), 10 * 60e3);
     p.stdout.on('data', d => (out += d));
     p.stderr.on('data', d => (err += d));
-    p.on('error', e => { clearTimeout(timer); log('error', 'No se pudo lanzar claude', e); fail('No encuentro el comando claude. ¿Está instalado Claude Code?'); });
+    p.on('error', e => { clearTimeout(timer); log('error', 'No se pudo lanzar claude', e); fail(t('claude_cli_missing')); });
     p.on('close', () => {
       clearTimeout(timer);
       // La ultima linea con type "result" trae la respuesta final
@@ -302,16 +311,16 @@ function sendToSession({ id, text, images } = {}) {
       for (const line of out.split('\n')) { try { const j = JSON.parse(line); if (j.type === 'result') r = j; } catch {} }
       if (!r) {
         log('warn', `claude -p devolvió algo inesperado: ${(err || out).slice(0, 300)}`);
-        return fail((err || 'claude no respondió.').trim().slice(0, 300));
+        return fail((err || t('claude_no_response')).trim().slice(0, 300));
       }
       if (r.is_error) {
         // El motivo puede venir en result, en errors o como una linea de texto suelta antes del JSON
         const loose = `${out}\n${err}`.split('\n').map(l => l.trim()).find(l => l && !l.startsWith('{')) || '';
-        const why = r.result || (r.errors || []).join(' ') || loose || 'Claude no pudo responder.';
+        const why = r.result || (r.errors || []).join(' ') || loose || t('claude_could_not_reply');
         Object.assign(s, { sending: false, status: 'done', at: Date.now() });
         push();
-        if (/authenticat|login|oauth/i.test(why)) return resolve({ ok: false, error: 'Claude Code no tiene la sesión iniciada. Abre una terminal, ejecuta claude y escribe /login.' });
-        if (/No conversation found/i.test(why)) return resolve({ ok: false, error: 'Claude Code no encuentra esta conversación en tu equipo.' });
+        if (/authenticat|login|oauth/i.test(why)) return resolve({ ok: false, error: t('claude_not_logged_in') });
+        if (/No conversation found/i.test(why)) return resolve({ ok: false, error: t('conversation_not_found') });
         return resolve({ ok: false, error: why.slice(0, 300) });
       }
       Object.assign(s, { sending: false, status: 'done', detail: r.result || '', at: Date.now() });
@@ -330,7 +339,7 @@ function flushQueue(s) {
   sendToSession({ id: s.id, ...q }).then(r => {
     if (r.ok) return;
     log('warn', `Mensaje en cola no enviado: ${r.error}`);
-    s.detail = `No se pudo enviar tu mensaje en cola: ${r.error}`; push();
+    s.detail = t('queued_send_failed', { error: r.error }); push();
   });
 }
 
@@ -400,19 +409,19 @@ on('test-mood', t => {
 });
 on('test-alert', () => {
   send('chime');
-  if (Notification.isSupported()) new Notification({ title: 'Claude te necesita · prueba', body: 'Así te avisará cuando una sesión pida permiso.', silent: true }).show();
+  if (Notification.isSupported()) new Notification({ title: t('claude_needs_you_test'), body: t('test_notification_body'), silent: true }).show();
 });
 
 handle('send', sendToSession);
 handle('send:cancel', id => { const s = sessions.get(id); if (s) { s.queued = null; push(); } return { ok: true }; });
 handle('permission:decide', ({ id, choice } = {}) => {
   const p = pending.get(id);
-  if (!p) return { ok: false, error: 'Esta petición ya no está abierta (quizá la respondiste en Claude).' };
+  if (!p) return { ok: false, error: t('request_closed') };
   const decision = asks.decide(p, choice);
-  if (!decision) return { ok: false, error: 'Contesta todas las preguntas antes de responder.' };
+  if (!decision) return { ok: false, error: t('answer_all_questions') };
   settle(p, decision);
   const s = sessions.get(p.session_id);
-  if (s) Object.assign(s, { status: decision.behavior === 'allow' ? 'working' : s.status, detail: decision.behavior === 'allow' ? 'Pensando…' : 'Denegado', at: Date.now() });
+  if (s) Object.assign(s, { status: decision.behavior === 'allow' ? 'working' : s.status, detail: decision.behavior === 'allow' ? '' : t('denied'), at: Date.now() });
   push();
   return { ok: true };
 });
@@ -421,17 +430,18 @@ handle('update:check', () => checkUpdate());
 handle('update:download', () => downloadUpdate());
 on('update:install', installUpdate);
 handle('config:get', () => fullConfig());
+handle('i18n:get', () => ({ ...i18n.current(), names: i18n.names() }));
 handle('config:set', patch => setConfig(patch));
 handle('config:reset', () => setConfig({ colors: DEFAULTS.colors }));
 handle('app:info', () => ({ version: app.getVersion(), electron: process.versions.electron, data: app.getPath('userData') }));
 handle('displays', () => screen.getAllDisplays().map((d, i) => ({
-  id: String(d.id), label: `Pantalla ${i + 1} · ${d.size.width}×${d.size.height}${d.id === screen.getPrimaryDisplay().id ? ' (principal)' : ''}`,
+  id: String(d.id), label: t(d.id === screen.getPrimaryDisplay().id ? 'display_name_primary' : 'display_name', { n: i + 1, w: d.size.width, h: d.size.height }),
 })));
 handle('pick-image', async () => {
-  const r = await dialog.showOpenDialog(settingsWin, { title: 'Imagen de la mascota', properties: ['openFile'],
-    filters: [{ name: 'Imágenes', extensions: ['png', 'gif', 'webp', 'jpg', 'jpeg', 'svg'] }] });
+  const r = await dialog.showOpenDialog(settingsWin, { title: t('pet_image'), properties: ['openFile'],
+    filters: [{ name: t('images'), extensions: ['png', 'gif', 'webp', 'jpg', 'jpeg', 'svg'] }] });
   if (r.canceled || !r.filePaths[0]) return fullConfig();
-  if (fs.statSync(r.filePaths[0]).size > 8 * 1024 * 1024) throw new Error('La imagen pesa más de 8 MB. Elige una más ligera.');
+  if (fs.statSync(r.filePaths[0]).size > 8 * 1024 * 1024) throw new Error(t('image_over_8mb'));
   // Se copia a la carpeta de la app para que no se rompa si mueves el original.
   const dest = file('mascota' + path.extname(r.filePaths[0]).toLowerCase());
   fs.copyFileSync(r.filePaths[0], dest);
@@ -470,7 +480,7 @@ function onPermission(req, res) {
     res.on('close', () => { if (pending.delete(p.id)) push(); });
     const s = sessions.get(e.session_id) || { id: e.session_id, cwd: e.cwd, prompt: '', tool: '' };
     const was = s.status;
-    Object.assign(s, { status: 'waiting', detail: p.summary.title, at: Date.now(), waitingSince: was === 'waiting' ? s.waitingSince : Date.now(), cwd: s.cwd || e.cwd });
+    Object.assign(s, { status: 'waiting', detail: t(p.summary.titleKey, p.summary.titleParams), at: Date.now(), waitingSince: was === 'waiting' ? s.waitingSince : Date.now(), cwd: s.cwd || e.cwd });
     sessions.set(s.id, s);
     if (was !== 'waiting') alertWaiting(s);
     push();
@@ -510,7 +520,7 @@ function startServer() {
   });
   server.on('error', e => {
     log('error', `No se pudo abrir el puerto ${PORT}`, e);
-    tray?.setToolTip(`Notch Pet · no puede recibir avisos de Claude (puerto ${PORT} ocupado)`);
+    tray?.setToolTip(t('port_busy', { port: PORT }));
   });
   server.listen(PORT, '127.0.0.1');
 }
@@ -525,6 +535,7 @@ else {
     nativeTheme.themeSource = 'dark';
     config = merge(DEFAULTS, readJson('config.json'));
     stats = tally(readJson('stats.json'), {}, null);
+    i18n.setLang(i18n.resolve(config.lang, app.getLocale()));
     startServer();
     syncTranscripts();
     createWindow();

@@ -116,8 +116,29 @@
     reset: svg('<path d="M5 12a7 7 0 1 0 2.1-5"/><path d="M5 4.5V8h3.5"/>'),
   };
 
+
+  // ---------- Idioma ----------
+  // El diccionario llega del proceso principal ({ lang, strings }). Los textos fijos del HTML llevan
+  // data-t (texto), data-t-html (texto con <code>, de nuestros propios ficheros), data-t-aria, data-t-title y data-t-placeholder.
+  let L = { lang: 'en', strings: {} };
+  const fill = (s, v = {}) => String(s).replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
+  const t = (k, v) => fill(L.strings[k] ?? k, v);
+  const tn = (k, n, v) => fill(L.strings[`${k}_${new Intl.PluralRules(L.lang).select(n)}`] ?? L.strings[`${k}_other`] ?? k, { n, ...v });
+  const ATTRS = [['t-aria', 'aria-label'], ['t-title', 'title'], ['t-placeholder', 'placeholder']];
+  function translateDom(root = document) {
+    for (const el of root.querySelectorAll('[data-t]')) el.textContent = t(el.dataset.t);
+    for (const el of root.querySelectorAll('[data-t-html]')) el.innerHTML = t(el.dataset.tHtml);
+    for (const [d, attr] of ATTRS) for (const el of root.querySelectorAll(`[data-${d}]`)) el.setAttribute(attr, t(el.getAttribute(`data-${d}`)));
+  }
+  function setLocale(l) {
+    if (!l || typeof l.strings !== 'object') return;
+    L = { lang: l.lang || 'en', strings: l.strings };
+    document.documentElement.lang = L.lang;
+    translateDom();
+  }
+
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fileUrl = p => 'file:///' + encodeURI(String(p).replace(/\\/g, '/')).replace(/%3F/gi, '?');
 
-  window.NP = { PET, ICON, esc, fileUrl, pixelize };
+  window.NP = { PET, ICON, esc, fileUrl, pixelize, t, tn, setLocale, translateDom };
 })();

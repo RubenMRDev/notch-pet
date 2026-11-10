@@ -24,6 +24,7 @@ y te deja contestarle sin abrir nada. Para Windows.
 - **Le escribes desde el notch, con fotos.** El mensaje entra en esa misma conversación; pega una imagen con Ctrl+V, arrástrala o adjúntala con el botón (hasta 4).
 - **Un clic y la abres.** El botón de abrir te lleva a esa sesión en la app de Claude (o a su carpeta en VS Code, la terminal o el Explorador).
 - **Tiene personalidad.** Duerme, se aburre, se impacienta si la haces esperar, se pone gafas cuando lee y un lápiz cuando edita, y engorda un poco con cada sesión que termina en el día. Hazle cosquillas.
+- **En tu idioma.** Español, inglés, francés, alemán, italiano, portugués, japonés, chino, coreano y ruso. Por defecto usa el de Windows; se cambia en **Ajustes → General**.
 
 | Trabajando | Te necesita | Ha terminado |
 |:--:|:--:|:--:|
@@ -76,7 +77,7 @@ npm start
 | Comando | Qué hace |
 |---|---|
 | `npm start` | Arranca la mascota |
-| `npm test` | Comprueba estados, hooks, conversaciones, actualizaciones y respuestas a permisos |
+| `npm test` | Comprueba estados, hooks, conversaciones, actualizaciones, respuestas a permisos, idiomas y la interfaz del notch |
 | `npm run dist` | Genera el instalador de Windows en `dist/` |
 
 La primera vez se abren los ajustes en **Conexión con Claude** para que instales los hooks. El atajo `Ctrl + Alt + N` deja el notch abierto aunque quites el ratón.
@@ -94,5 +95,6 @@ La primera vez se abren los ajustes en **Conexión con Claude** para que instale
 | `updater.js` | Actualizaciones desde las releases de GitHub |
 | `index.html` · `notch.js` · `notch.css` | El notch |
 | `settings.html` · `settings.js` · `settings.css` | La ventana de ajustes |
-| `pet.css` · `shared.js` | La mascota y los iconos, compartidos |
+| `pet.css` · `shared.js` | La mascota, los iconos y las traducciones del lado de las ventanas, compartidos |
+| `i18n.js` · `locales/` | Los 10 idiomas: un JSON por idioma con las mismas claves |
 | `promo/` | Escena de demostración con la que se generan las imágenes y el vídeo |

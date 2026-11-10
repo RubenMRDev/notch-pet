@@ -4,8 +4,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const SEND = ['openH', 'peekH', 'quit', 'open-settings', 'open-session', 'typing', 'test-mood', 'test-alert', 'open-logs', 'update:install'];
 const INVOKE = ['config:get', 'config:set', 'config:reset', 'displays', 'pick-image', 'hooks:status', 'hooks:install',
-  'hooks:uninstall', 'send', 'send:cancel', 'app:info', 'update:status', 'update:check', 'update:download', 'permission:decide'];
-const ON = ['state', 'config', 'open', 'chime', 'finished', 'peek-end', 'update', 'asked'];
+  'hooks:uninstall', 'send', 'send:cancel', 'app:info', 'update:status', 'update:check', 'update:download', 'permission:decide', 'i18n:get'];
+const ON = ['state', 'config', 'open', 'chime', 'finished', 'peek-end', 'update', 'asked', 'i18n'];
 
 contextBridge.exposeInMainWorld('api', {
   send: (ch, ...a) => { if (SEND.includes(ch)) ipcRenderer.send(ch, ...a); },
