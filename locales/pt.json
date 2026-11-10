@@ -244,5 +244,8 @@
   "retry": "Tentar de novo",
   "settings_load_failed": "Não foi possível carregar as definições: {error}",
   "settings_json_read_failed": "Não foi possível ler o teu settings.json: {error}",
-  "doodle": "Rabisco"
+  "doodle": "Rabisco",
+  "notch_position": "Posição",
+  "notch_position_description": "Mantém premida a barra do notch e arrasta-a ao longo do topo.",
+  "center": "Centrar"
 }

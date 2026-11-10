@@ -39,7 +39,7 @@ const DEFAULTS = {
   sound: true, notify: true, dnd: false,
   display: 'primary', hideFullscreen: true, visible: true,
   shortcut: 'CommandOrControl+Alt+N', openWith: 'claude',
-  maxSessions: 3, finishAlert: 'multi', firstRunDone: false, lang: 'auto',
+  maxSessions: 3, finishAlert: 'multi', firstRunDone: false, lang: 'auto', pos: 0.5,
 };
 const readJson = name => { try { return JSON.parse(fs.readFileSync(file(name), 'utf8')); } catch { return {}; } };
 const writeJson = (name, v) => { try { fs.writeFileSync(file(name), JSON.stringify(v, null, 2)); } catch (e) { log('error', `No se pudo guardar ${name}`, e); } };
@@ -105,11 +105,13 @@ function targetDisplay() {
   if (config.display === 'follow') return screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   return screen.getAllDisplays().find(d => String(d.id) === String(config.display)) || screen.getPrimaryDisplay();
 }
+// pos: donde va el centro del notch en la barra de arriba, de 0 (izquierda) a 1 (derecha). Se elige arrastrandolo.
+const clampX = (d, x) => Math.round(Math.min(d.bounds.x + d.bounds.width - W, Math.max(d.bounds.x, x)));
 function place() {
   if (!win) return;
   const d = targetDisplay();
   displayId = d.id;
-  win.setBounds({ x: Math.round(d.bounds.x + (d.bounds.width - W) / 2), y: d.bounds.y, width: W, height: H });
+  win.setBounds({ x: clampX(d, d.bounds.x + d.bounds.width * config.pos - W / 2), y: d.bounds.y, width: W, height: H });
 }
 function updateVisibility() {
   if (!win) return;
@@ -196,10 +198,11 @@ function setConfig(patch) {
     throw new Error(t('shortcut_unavailable', { shortcut: rest.shortcut }));
   }
   if ('shortcut' in rest) shortcutOk = true;
+  if ('pos' in rest) { const v = Number(rest.pos); rest.pos = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.5; }
   if ('maxSessions' in rest) rest.maxSessions = Math.min(10, Math.max(1, Number(rest.maxSessions) || 3));
   config = merge(config, rest);
   writeJson('config.json', config);
-  if ('display' in rest) place();
+  if ('display' in rest || 'pos' in rest) place();
   if ('lang' in rest) { applyLang(); if (settingsWin && !settingsWin.isDestroyed()) setTimeout(() => settingsWin?.reload(), 50); }
   if ('maxSessions' in rest) { syncTranscripts(); push(); }
   if ('colors' in rest) tray?.setImage(nativeImage.createFromBuffer(petPng(32, config.colors.pet)));
@@ -399,6 +402,16 @@ on('typing', t => {
     setTimeout(() => { if (typing && !win.isFocused()) { win.show(); win.focus(); if (!win.isFocused()) log('warn', 'Windows no dio el foco del teclado al notch'); } }, 150);
   } else { win.blur(); win.setFocusable(false); }
 });
+// Mover el notch: la ventana mantiene pulsada la barra y manda cuanto se ha movido el raton (dx, en pixeles de pantalla).
+let drag = null; // { wx: x de la ventana al empezar, d: su pantalla }
+on('drag', ({ phase, dx } = {}) => {
+  if (!win || win.isDestroyed()) return;
+  if (phase === 'start') { const b = win.getBounds(); drag = { wx: b.x, d: screen.getDisplayMatching(b) }; return; }
+  if (!drag) return;
+  const x = clampX(drag.d, drag.wx + (Number(dx) || 0));
+  win.setBounds({ x, y: drag.d.bounds.y, width: W, height: H });
+  if (phase === 'end') { const d = drag.d; drag = null; setConfig({ pos: (x + W / 2 - d.bounds.x) / d.bounds.width }); }
+});
 on('quit', () => app.quit());
 on('open-settings', page => openSettings(page));
 on('open-session', id => openSession(sessions.get(id)));
@@ -457,12 +470,12 @@ handle('hooks:uninstall', () => hooks.uninstall());
 function watchCursor() {
   if (!win || win.isDestroyed() || !win.isVisible()) return; // al cerrar para actualizar, la ventana ya no existe
   const p = screen.getCursorScreenPoint();
-  if (config.display === 'follow' && !open && screen.getDisplayNearestPoint(p).id !== displayId) place();
+  if (config.display === 'follow' && !open && !drag && screen.getDisplayNearestPoint(p).id !== displayId) place();
   const b = win.getBounds();
   if (peek && Date.now() > peek.until && !open) { peek = null; send('peek-end'); }
   const w = open || peek ? 404 : 236, h = open ? openH : peek ? peek.h : 36, rx = p.x - b.x, ry = p.y - b.y;
   const inside = rx >= (W - w) / 2 && rx <= (W + w) / 2 && ry >= 0 && ry <= h;
-  setOpen(inside || pinned || typing);
+  setOpen(inside || pinned || typing || !!drag);
 }
 
 // --- Peticiones de permiso: el hook espera aqui (como mucho ~9 min) a que respondas desde el notch ---

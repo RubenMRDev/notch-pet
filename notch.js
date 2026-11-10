@@ -480,6 +480,40 @@
   // Si cierras el selector sin elegir, el notch suelta el foco.
   list.addEventListener('cancel', e => { if (e.target.matches('.file') && !typing) api.send('typing', false); }, true);
 
+  // ---------- Mover el notch: mantén pulsada la barra un momento y arrástralo por arriba ----------
+  // Un clic normal sigue siendo un clic (cosquillas, ajustes, cerrar); solo si lo mantienes pulsado se mueve.
+  const bar = document.querySelector('.bar');
+  let hold = null, dragging = false, dragRaf = 0, lastDx = 0, eatClick = false;
+  bar.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    const x0 = e.screenX, id = e.pointerId;
+    hold = { x0, t: setTimeout(() => {
+      hold = { x0 };
+      dragging = true; lastDx = 0;
+      try { bar.setPointerCapture(id); } catch {}
+      shell.classList.add('dragging');
+      api.send('drag', { phase: 'start' });
+    }, 280) };
+  });
+  bar.addEventListener('pointermove', e => {
+    if (!hold) return;
+    if (!dragging) { if (Math.abs(e.screenX - hold.x0) > 6) { clearTimeout(hold.t); hold = null; } return; }
+    lastDx = e.screenX - hold.x0;
+    if (!dragRaf) dragRaf = requestAnimationFrame(() => { dragRaf = 0; if (dragging) api.send('drag', { phase: 'move', dx: lastDx }); });
+  });
+  const endDrag = () => {
+    if (hold) clearTimeout(hold.t);
+    hold = null;
+    if (!dragging) return;
+    dragging = false;
+    shell.classList.remove('dragging');
+    api.send('drag', { phase: 'end', dx: lastDx });
+    eatClick = true; setTimeout(() => (eatClick = false), 50); // soltar tras arrastrar no es un clic
+  };
+  for (const ev of ['pointercancel', 'lostpointercapture']) bar.addEventListener(ev, endDrag);
+  window.addEventListener('pointerup', endDrag); // aunque sueltes fuera de la barra
+  bar.addEventListener('click', e => { if (eatClick) { e.stopPropagation(); e.preventDefault(); eatClick = false; } }, true);
+
   // ---------- Cosquillas: salta; si le das muchas veces seguidas, se marea ----------
   let clicks = [], tickle;
   pet.addEventListener('click', () => {

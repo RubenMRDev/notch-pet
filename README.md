@@ -22,6 +22,7 @@ y te deja contestarle sin abrir nada. Para Windows.
 - **Te cuenta cuándo ha terminado.** Si llevas varias sesiones a la vez, el notch se despliega solo unos segundos con el resumen de la que ha acabado.
 - **Responde lo que te pide sin cambiar de ventana.** Permitir o denegar una herramienta (con «Permitir siempre» si Claude lo propone), elegir entre las opciones de una pregunta o aprobar un plan, desde el propio notch. Si contestas en la ventana de Claude, el notch lo retira solo.
 - **Le escribes desde el notch, con fotos.** El mensaje entra en esa misma conversación; pega una imagen con Ctrl+V, arrástrala o adjúntala con el botón (hasta 4).
+- **Lo pones donde quieras.** Mantén pulsada la barra del notch y arrástralo por la parte de arriba de la pantalla; se queda ahí. En **Ajustes → Notch** lo vuelves a centrar.
 - **Un clic y la abres.** El botón de abrir te lleva a esa sesión en la app de Claude (o a su carpeta en VS Code, la terminal o el Explorador).
 - **Tiene personalidad.** Duerme, se aburre, se impacienta si la haces esperar, se pone gafas cuando lee y un lápiz cuando edita, y engorda un poco con cada sesión que termina en el día. Hazle cosquillas.
 - **En tu idioma.** Español, inglés, francés, alemán, italiano, portugués, japonés, chino, coreano y ruso. Por defecto usa el de Windows; se cambia en **Ajustes → General**.

@@ -244,5 +244,8 @@
   "retry": "Riprova",
   "settings_load_failed": "Impossibile caricare le impostazioni: {error}",
   "settings_json_read_failed": "Impossibile leggere il tuo settings.json: {error}",
-  "doodle": "Scarabocchio"
+  "doodle": "Scarabocchio",
+  "notch_position": "Posizione",
+  "notch_position_description": "Tieni premuta la barra del notch e trascinala in alto.",
+  "center": "Centra"
 }

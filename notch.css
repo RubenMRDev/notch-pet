@@ -188,3 +188,6 @@ body:is(.sleep, .idle, .bored) .statusline { background: transparent; }
   #shell, #notch, .panel { transition-duration: .01s !important; }
   .spin, .pdot, .statusline { animation: none !important; }
 }
+
+/* Arrastrando el notch por la barra de arriba */
+#shell.dragging, #shell.dragging * { cursor: grabbing !important; }

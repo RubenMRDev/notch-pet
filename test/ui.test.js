@@ -222,6 +222,27 @@ test('una bifurcación se distingue: «fork» va aparte y no se corta', async ()
   assert.ok(await js("getComputedStyle(document.querySelector('#list .tag')).display !== 'none' && document.querySelector('#list .tag').getBoundingClientRect().width > 10"), 'la marca no se ve');
 });
 
+test('mantener pulsada la barra mueve el notch; un clic no', async () => {
+  await emit('open', true); await wait(300);
+  await js('__test.clear()');
+  const p = await center('#petslot');
+  const poked = () => js("document.querySelector('#petslot .pet').classList.contains('poke')");
+  await mouse('mouseMove', p); await mouse('mouseDown', p); await mouse('mouseUp', p); await wait(60);
+  assert.ok(!(await calls()).some(c => c[0] === 'drag'), 'un clic ha movido el notch');
+  assert.ok(await poked(), 'el clic ya no hace cosquillas');
+  await wait(700);
+  // Con coordenadas de pantalla (globalX), como el raton de verdad: al moverse la ventana, las de la ventana no cambian
+  const at = (type, dx) => wc.sendInputEvent({ type, x: p.x + dx, y: p.y, globalX: 500 + dx, globalY: 10, button: 'left', clickCount: 1, ...(type === 'mouseMove' ? { modifiers: ['leftButtonDown'] } : {}) });
+  at('mouseDown', 0); await wait(360);
+  for (const dx of [10, 30, 60]) { at('mouseMove', dx); await wait(40); }
+  at('mouseUp', 60); await wait(60);
+  const d = (await calls()).filter(c => c[0] === 'drag').map(c => c[1]);
+  assert.strictEqual(d[0]?.phase, 'start'); assert.ok(d.some(x => x.phase === 'move'), 'no manda el movimiento');
+  assert.deepStrictEqual(d.at(-1), { phase: 'end', dx: 60 }, JSON.stringify(d));
+  assert.strictEqual(await poked(), false, 'soltar tras arrastrar ha hecho cosquillas');
+  assert.strictEqual(await js("document.getElementById('shell').classList.contains('dragging')"), false);
+});
+
 test('cambia de idioma al momento (y los plurales de cada idioma)', async () => {
   await emit('open', true);
   await emit('i18n', locale('en'));

@@ -254,5 +254,8 @@
   "retry": "Повторить",
   "settings_load_failed": "Не удалось загрузить настройки: {error}",
   "settings_json_read_failed": "Не удалось прочитать твой settings.json: {error}",
-  "doodle": "Каракуля"
+  "doodle": "Каракуля",
+  "notch_position": "Положение",
+  "notch_position_description": "Зажми полоску выреза и перетащи её вдоль верхнего края.",
+  "center": "По центру"
 }

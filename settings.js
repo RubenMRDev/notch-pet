@@ -115,6 +115,7 @@
   // ---------- Opciones simples ----------
   for (const k of SWITCHES) $(k).onchange = e => save({ [k]: e.target.checked });
   for (const k of SELECTS) $(k).onchange = e => save({ [k]: k === 'maxSessions' ? +e.target.value : e.target.value });
+  $('centerNotch').onclick = () => save({ pos: 0.5 });
   $('testAlert').onclick = () => api.send('test-alert');
 
   // ---------- Atajo: se graba pulsando la combinacion ----------

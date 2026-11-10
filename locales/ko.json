@@ -244,5 +244,8 @@
   "retry": "다시 시도",
   "settings_load_failed": "설정을 불러올 수 없었어요: {error}",
   "settings_json_read_failed": "settings.json을 읽을 수 없었어요: {error}",
-  "doodle": "낙서"
+  "doodle": "낙서",
+  "notch_position": "위치",
+  "notch_position_description": "노치 막대를 길게 누른 채 위쪽을 따라 끌어 옮기세요.",
+  "center": "가운데로"
 }

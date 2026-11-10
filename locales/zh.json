@@ -244,5 +244,8 @@
   "retry": "重试",
   "settings_load_failed": "无法加载设置：{error}",
   "settings_json_read_failed": "无法读取你的 settings.json：{error}",
-  "doodle": "涂鸦"
+  "doodle": "涂鸦",
+  "notch_position": "位置",
+  "notch_position_description": "按住刘海栏并沿顶部拖动。",
+  "center": "居中"
 }

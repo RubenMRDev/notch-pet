@@ -244,5 +244,8 @@
   "retry": "Retry",
   "settings_load_failed": "The settings couldn't be loaded: {error}",
   "settings_json_read_failed": "Your settings.json couldn't be read: {error}",
-  "doodle": "Doodle"
+  "doodle": "Doodle",
+  "notch_position": "Position",
+  "notch_position_description": "Hold the notch bar and drag it along the top.",
+  "center": "Center"
 }

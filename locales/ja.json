@@ -244,5 +244,8 @@
   "retry": "再試行",
   "settings_load_failed": "設定を読み込めませんでした：{error}",
   "settings_json_read_failed": "settings.json を読み込めませんでした：{error}",
-  "doodle": "らくがき"
+  "doodle": "らくがき",
+  "notch_position": "位置",
+  "notch_position_description": "ノッチのバーを長押しして、上端に沿ってドラッグします。",
+  "center": "中央に戻す"
 }

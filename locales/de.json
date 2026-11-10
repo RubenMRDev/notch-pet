@@ -244,5 +244,8 @@
   "retry": "Erneut versuchen",
   "settings_load_failed": "Die Einstellungen konnten nicht geladen werden: {error}",
   "settings_json_read_failed": "Deine settings.json konnte nicht gelesen werden: {error}",
-  "doodle": "Kritzelei"
+  "doodle": "Kritzelei",
+  "notch_position": "Position",
+  "notch_position_description": "Halte die Notch-Leiste gedrückt und zieh sie oben entlang.",
+  "center": "Zentrieren"
 }

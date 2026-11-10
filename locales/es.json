@@ -244,5 +244,8 @@
   "retry": "Reintentar",
   "settings_load_failed": "No se pudieron cargar los ajustes: {error}",
   "settings_json_read_failed": "No se pudo leer tu settings.json: {error}",
-  "doodle": "Garabato"
+  "doodle": "Garabato",
+  "notch_position": "Posición",
+  "notch_position_description": "Mantén pulsada la barra del notch y arrástrala por arriba.",
+  "center": "Centrar"
 }
