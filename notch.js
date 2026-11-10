@@ -512,6 +512,8 @@
   };
   for (const ev of ['pointercancel', 'lostpointercapture']) bar.addEventListener(ev, endDrag);
   window.addEventListener('pointerup', endDrag); // aunque sueltes fuera de la barra
+  // Doble clic en la barra: vuelve al centro.
+  bar.addEventListener('dblclick', e => { if (!e.target.closest('button')) api.invoke('config:set', { pos: 0.5 }).catch(() => {}); });
   bar.addEventListener('click', e => { if (eatClick) { e.stopPropagation(); e.preventDefault(); eatClick = false; } }, true);
 
   // ---------- Cosquillas: salta; si le das muchas veces seguidas, se marea ----------

@@ -243,6 +243,14 @@ test('mantener pulsada la barra mueve el notch; un clic no', async () => {
   assert.strictEqual(await js("document.getElementById('shell').classList.contains('dragging')"), false);
 });
 
+test('doble clic en la barra vuelve a centrar el notch (en los botones no)', async () => {
+  await js('__test.clear()');
+  await js("document.getElementById('title').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))");
+  await js("document.getElementById('gear').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))");
+  const c = (await calls()).filter(c => c[0] === 'config:set');
+  assert.deepStrictEqual(c, [['config:set', { pos: 0.5 }]]);
+});
+
 test('cambia de idioma al momento (y los plurales de cada idioma)', async () => {
   await emit('open', true);
   await emit('i18n', locale('en'));

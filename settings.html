@@ -20,6 +20,8 @@
       <a href="#notch" data-page="notch"><span data-icon="notch"></span><span data-t="notch"></span></a>
       <a href="#claude" data-page="claude"><span data-icon="plug"></span><span data-t="claude_connection"></span><i class="navdot" id="navdot"></i></a>
       <a href="#general" data-page="general"><span data-icon="gear"></span><span data-t="general"></span></a>
+      <a href="#ayuda" data-page="ayuda"><span data-icon="help"></span><span data-t="help"></span></a>
+      <a href="#novedades" data-page="novedades"><span data-icon="sparkle"></span><span data-t="whats_new"></span></a>
     </nav>
   </aside>
 
@@ -138,6 +140,19 @@
         <div class="row"><span><span data-t="data_and_logs"></span><small id="dataPath"></small></span><button class="btn" id="openData"><span data-icon="folder"></span><span data-t="open_folder"></span></button></div>
         <div class="row"><span><span data-t="version"></span><small id="about"></small></span><button class="btn ghost danger" id="quitApp" data-t="quit_app"></button></div>
       </div>
+    </section>
+    <!-- Ayuda: capturas en help/<idioma>/*.png (npm run help-shots) -->
+    <section class="page" data-page="ayuda">
+      <h1 data-t="help"></h1>
+      <p class="lead" data-t="help_lead"></p>
+      <div class="help" id="help"></div>
+    </section>
+
+    <!-- Novedades -->
+    <section class="page" data-page="novedades">
+      <h1 data-t="whats_new"></h1>
+      <p class="lead" data-t="whats_new_lead"></p>
+      <div class="group releases" id="releases"></div>
     </section>
   </main>
 <script src="shared.js"></script>

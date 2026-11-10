@@ -13,7 +13,7 @@
   $('mockPet').innerHTML = PET;
 
   // ---------- Navegacion ----------
-  const PAGES = ['mascota', 'avisos', 'notch', 'claude', 'general'];
+  const PAGES = ['mascota', 'avisos', 'notch', 'claude', 'general', 'ayuda', 'novedades'];
   function show() {
     const page = PAGES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'mascota';
     for (const s of document.querySelectorAll('.page')) s.classList.toggle('on', s.dataset.page === page);
@@ -197,6 +197,22 @@
   api.on('update', renderUpdate);
   api.invoke('update:status').then(renderUpdate).catch(() => {});
 
+  // ---------- Ayuda: cada truco con su captura (en el idioma de la app; si no la hay, en ingles) ----------
+  const HELP = [['open', 'help_open_title', 'help_open'], ['ask', 'help_ask_title', 'help_ask'], ['write', 'help_write_title', 'help_write'],
+    ['finish', 'help_finish_title', 'help_finish'], ['move', 'help_move_title', 'help_move'], ['', 'help_extras_title', 'help_extras']];
+  const lang = locale?.lang || 'en';
+  $('help').innerHTML = HELP.map(([shot, title, text]) => `<article class="tip">${shot ? `<div class="shot"><img src="help/${lang}/${shot}.png" alt="" data-shot="${shot}"></div>` : ''}`
+    + `<div class="txt"><h3>${esc(t(title))}</h3><p>${esc(t(text))}</p></div></article>`).join('');
+  for (const img of $('help').querySelectorAll('img')) img.onerror = () => { if (!img.src.includes('/en/')) img.src = `help/en/${img.dataset.shot}.png`; else img.parentElement.remove(); };
+
+  // ---------- Novedades: lo que trajo cada version (una linea por cosa) ----------
+  const RELEASES = [['1.6.0', 'release_1_6_0'], ['1.5.0', 'release_1_5_0'], ['1.4.2', 'release_1_4_2'], ['1.4.1', 'release_1_4_1'],
+    ['1.4.0', 'release_1_4_0'], ['1.3.0', 'release_1_3_0'], ['1.2.2', 'release_1_2_2'], ['1.2.1', 'release_1_2_1'], ['1.2.0', 'release_1_2_0'],
+    ['1.1.0', 'release_1_1_0'], ['1.0.0', 'release_1_0_0']];
+  const renderReleases = current => ($('releases').innerHTML = RELEASES.map(([v, key]) => `<section class="release"><div class="rhead"><b>${esc(t('version_number', { version: v }))}</b>`
+    + `${v === current ? `<span class="badge on">${esc(t('your_version'))}</span>` : ''}</div><ul>${t(key).split('\n').map(l => `<li>${esc(l)}</li>`).join('')}</ul></section>`).join(''));
+  renderReleases('');
+
   // ---------- General ----------
   $('openData').onclick = () => api.send('open-logs');
   $('quitApp').onclick = () => api.send('quit');
@@ -210,6 +226,7 @@
       $('display').innerHTML = `<option value="primary">${esc(t('primary_display'))}</option><option value="follow">${esc(t('mouse_display'))}</option>`
         + displays.map(d => `<option value="${esc(d.id)}">${esc(d.label)}</option>`).join('');
       $('version').textContent = t('version_number', { version: info.version });
+      renderReleases(info.version);
       $('about').textContent = `Notch Pet ${info.version} · Electron ${info.electron}`;
       $('dataPath').textContent = info.data;
       cfg = await api.invoke('config:get');

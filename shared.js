@@ -150,6 +150,8 @@
     folder: svg('<path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h4l2 2h7a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-9Z"/>'),
     play: svg('<path d="M8 6.5v11l9-5.5-9-5.5Z"/>'),
     image: svg('<rect x="4" y="5" width="16" height="14" rx="2.5"/><circle cx="9.5" cy="10" r="1.5"/><path d="m5 17 4.5-4.5 3 3 2-2L19 17"/>'),
+    help: svg('<circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.6a2.4 2.4 0 1 1 3.3 2.2c-.6.3-1 .8-1 1.5v.3M12 16.6v.1"/>'),
+    sparkle: svg('<path d="M11 4.5l1.6 4.4 4.4 1.6-4.4 1.6L11 16.5l-1.6-4.4L5 10.5l4.4-1.6Z"/><path d="M18 15v4M16 17h4"/>'),
     reset: svg('<path d="M5 12a7 7 0 1 0 2.1-5"/><path d="M5 4.5V8h3.5"/>'),
   };
 
