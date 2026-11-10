@@ -33,6 +33,10 @@ y te deja contestarle sin abrir nada. Para Windows.
 
 <p align="center"><img src="docs/pets.png" width="680" alt="Los cuatro aspectos: gota, gato, fantasma y robot"></p>
 
+También en **8 bits**: en Ajustes → Mascota eliges el estilo, *Suave* o *8 bits*, con las mismas caras, humores y accesorios.
+
+<p align="center"><img src="docs/pets-8bits.png" width="680" alt="Los cuatro aspectos en estilo 8 bits"></p>
+
 O usa tu propia imagen (PNG, GIF animado o WebP con fondo transparente). Los colores también se cambian.
 
 ### Ajustes

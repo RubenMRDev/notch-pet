@@ -7,6 +7,8 @@ const BORED_MS = 30 * 60e3;       // 30 min sin nada -> se aburre
 const SLEEP_MS = 2 * 3600e3;      // 2 h sin nada -> se duerme
 const IMPATIENT_MS = 5 * 60e3;    // 5 min esperando tu permiso -> se impacienta
 
+const NOT_PROMPT = /^\s*<(local-command|command-name|command-message|command-args|task-notification|system-reminder)/;
+
 const isIdleNotice = e =>
   e.notification_type === 'idle_prompt' || /waiting for your input/i.test(e.message || '');
 
@@ -22,7 +24,8 @@ function apply(sessions, e, now = Date.now()) {
   s.cwd = e.cwd || s.cwd;
   s.at = now;
   switch (e.hook_event_name) {
-    case 'UserPromptSubmit': s.status = 'working'; s.prompt = e.prompt || ''; s.detail = 'Pensando…'; s.tool = ''; break;
+    // Los avisos internos (tareas en segundo plano, comandos locales) no son peticiones tuyas.
+    case 'UserPromptSubmit': s.status = 'working'; if (!NOT_PROMPT.test(e.prompt || '')) s.prompt = e.prompt || ''; s.detail = 'Pensando…'; s.tool = ''; break;
     case 'PreToolUse': s.status = 'working'; s.detail = e.tool_name || ''; s.tool = e.tool_name || ''; break;
     case 'PostToolUse': s.status = 'working'; break;
     case 'Notification':
@@ -106,6 +109,8 @@ if (require.main === module) {
   assert.strictEqual(view(m, HAPPY_MS + 1).mood, 'idle');
   assert.strictEqual(view(m, BORED_MS + 1).mood, 'bored');
   assert.strictEqual(view(m, SLEEP_MS + 1).mood, 'sleep');
+  ev('UserPromptSubmit', { prompt: '<task-notification><task-id>x</task-id>' });
+  assert.strictEqual(m.get('a').prompt, 'hola', 'un aviso interno no pisa tu peticion');
   ev('SessionEnd');
   assert.strictEqual(view(m, 0).sessions.length, 0);
 

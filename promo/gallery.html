@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es" data-style="pixel">
+<head>
+<meta charset="utf-8">
+<title>Notch Pet · galería 8 bits</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=block">
+<link rel="stylesheet" href="../pet.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html { background: #0d0c12; }
+  body { padding: 36px 40px; color: var(--txt); font: 600 13px "Bricolage Grotesque", var(--font); }
+  h1 { font: 800 30px/1 "Bricolage Grotesque", var(--font); letter-spacing: -.03em; }
+  h1 + p { color: var(--txt-2); margin: 8px 0 26px; font-weight: 500; }
+  table { border-collapse: separate; border-spacing: 10px 10px; margin-left: -10px; }
+  th { color: var(--txt-3); font-weight: 600; padding-bottom: 2px; text-align: center; }
+  th.row { text-align: right; padding-right: 8px; color: var(--txt-2); }
+  td { width: 104px; height: 104px; border-radius: 16px; background: #16151d; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .06);
+    display: table-cell; vertical-align: middle; text-align: center; position: relative; }
+  .cell { display: inline-grid; place-items: center; width: 100%; height: 100%; }
+  .cell .pet { transform: scale(2.3); transform-origin: 50% 60%; }
+</style>
+</head>
+<body>
+  <h1>Mascotas en 8 bits</h1>
+  <p>Cuatro aspectos, cada humor y lo que llevan según la herramienta. Los colores salen de los ajustes.</p>
+  <table id="t"></table>
+<script src="../shared.js"></script>
+<script>
+  const { PET } = window.NP;
+  const MOODS = [['sleep', 'Durmiendo', 'z'], ['idle', 'Tranquila', ''], ['bored', 'Aburrida', '…'], ['working', 'Trabajando', ''],
+    ['waiting', 'Te necesita', '!'], ['happy', 'Contenta', '']];
+  const TOOLS = [['read', 'Leyendo'], ['edit', 'Editando'], ['term', 'Terminal'], ['web', 'Web']];
+  const SKINS = [['blob', 'Gota'], ['cat', 'Gato'], ['ghost', 'Fantasma'], ['robot', 'Robot']];
+  const cell = (cls, extra = '', fx = '') => `<td><div class="cell ${cls}" ${extra}>${PET.replace('<div class="fx"></div>', `<div class="fx">${fx}</div>`)}</div></td>`;
+  let h = '<tr><th></th>' + MOODS.map(m => `<th>${m[1]}</th>`).join('') + TOOLS.map(t => `<th>${t[1]}</th>`).join('') + '</tr>';
+  for (const [skin, name] of SKINS) {
+    h += `<tr data-skin="${skin}"><th class="row">${name}</th>`
+      + MOODS.map(([m, , fx]) => cell(m, '', fx)).join('')
+      + TOOLS.map(([t]) => cell('working', `data-tool="${t}"`)).join('') + '</tr>';
+  }
+  document.getElementById('t').innerHTML = h;
+  window.NP.pixelize();
+  document.fonts.ready.then(() => setTimeout(() => (window.SHOT_READY = true), 400));
+</script>
+</body>
+</html>

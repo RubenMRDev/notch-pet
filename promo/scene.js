@@ -12,7 +12,8 @@
   // ---------- Datos de ejemplo ----------
   const T0 = Date.now();
   const COLORS = { pet: '#f0916b', bg: '#0a0a0c', work: '#6aa8ff', wait: '#ffb340', done: '#5fd38d' };
-  api.emit('config', { colors: COLORS, skin: 'blob', customImage: '' });
+  const STYLE = params.get('style') === 'pixel' ? 'pixel' : 'smooth';
+  api.emit('config', { colors: COLORS, skin: 'blob', customImage: '', style: STYLE });
   const ago = m => Date.now() - m * 60e3;
   const S = {
     checkout: { id: 'a1', title: 'Rediseño del checkout', cwd: 'C:/dev/tienda-web', status: 'working', tool: 'Edit', prompt: 'Rediseña el checkout y añade validación', detail: 'Edit' },
@@ -48,6 +49,7 @@
   $('skinsScene').innerHTML = [['blob', 'Gota'], ['cat', 'Gato'], ['ghost', 'Fantasma'], ['robot', 'Robot']]
     .map(([k, n], i) => `<div class="skintile happy" data-skin="${k}" style="--i:${i}">${PET}<span>${n}</span></div>`).join('');
   $('endPet').innerHTML = PET;
+  window.NP.pixelize();
 
   const notchStage = $('notchStage');
   const open = o => api.emit('open', o);

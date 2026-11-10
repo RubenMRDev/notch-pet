@@ -60,3 +60,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; }
 .shot.pets #skinsScene { top: 50%; transform: translateY(-50%); gap: 18px; }
 .shot.pets .skintile { width: 140px; height: 160px; }
 .shot.pets .skintile .pet { transform: scale(2.8); }
+
+/* 8 bits: el dibujo es 5px mas alto, se baja un poco donde va ampliado */
+:root[data-style=pixel] .skintile .pet { margin-top: 12px; }
+:root[data-style=pixel] .endpet .pet { margin-top: 14px; }

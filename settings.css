@@ -95,6 +95,7 @@ option { background: #1b1b20; color: var(--txt); }
 .mock b { font-weight: 600; white-space: nowrap; }
 .seg { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 14px 0; }
 .seg.sub { padding-top: 8px; }
+.seg.flat { padding: 0 0 12px; }
 .seg[hidden] { display: none; }
 .seg button { height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid var(--line); background: none; color: var(--txt-2); cursor: pointer;
   transition: background .15s, color .15s, border-color .15s; }
@@ -142,5 +143,8 @@ input[type=color]::-webkit-color-swatch-wrapper { padding: 0; } input[type=color
 .btn.update-ready { background: var(--done); border-color: var(--done); color: #0d1f14; font-weight: 600; }
 .btn.update-ready:hover { background: color-mix(in oklab, var(--done), white 12%); }
 .group + .group { margin-top: 12px; }
+
+:root[data-style=pixel] :is(.skin .tile, .brand-pet) .pet { margin-top: 9px; }
+:root[data-style=pixel] .mock #mockPet { margin-top: 0; }
 
 @media (prefers-reduced-motion: reduce) { .page { animation: none; } }

@@ -40,6 +40,9 @@
     }
     const skin = c.skin === 'image' && !c.customImage ? 'blob' : c.skin;
     for (const el of [$('mockShell'), $('brandPet')]) el.dataset.skin = skin;
+    root.dataset.style = c.style === 'pixel' ? 'pixel' : 'smooth';
+    for (const b of $('styles').children) b.setAttribute('aria-pressed', b.dataset.style === root.dataset.style);
+    window.NP.pixelize();
     for (const img of document.querySelectorAll('.custom')) if (c.customImage) img.src = fileUrl(c.customImage);
     for (const b of $('skins').children) b.setAttribute('aria-checked', b.dataset.skin === skin);
     $('skins').querySelector('[data-skin=image] .tile').innerHTML = c.customImage ? PET : `<span class="add">${ICON.image}</span>`;
@@ -87,6 +90,8 @@
     }
     save({ skin: b.dataset.skin }, $('skinMsg'));
   });
+
+  $('styles').addEventListener('click', e => { const b = e.target.closest('button'); if (b) save({ style: b.dataset.style }, $('skinMsg')); });
 
   // ---------- Colores ----------
   const COLORS = [['pet', 'Mascota', 'El color de su cuerpo.'], ['bg', 'Fondo del notch', 'La pastilla de arriba.'],

@@ -122,6 +122,55 @@
 .working[data-tool=web] .acc::before { content: ""; position: absolute; right: -9px; bottom: 1px; width: 8px; height: 8px; border-radius: 50%;
   border: 1.5px solid var(--work); background: linear-gradient(var(--work), var(--work)) 50% / 100% 1.5px no-repeat; }
 
+/* ---------- Estilo 8 bits (html[data-style=pixel]) ---------- */
+.pxslot { display: none; }
+:root[data-style=pixel] .pxslot { display: block; position: absolute; left: 0; bottom: 0; width: 30px; height: 30px; }
+:root[data-style=pixel] .body { display: none; }
+:root[data-style=pixel] [data-skin=image] .pxslot, :root[data-style=pixel][data-skin=image] .pxslot { display: none; }
+:root[data-style=pixel] .acc { display: none !important; }
+/* La terminal se queda con su >_ normal tambien en 8 bits (en pixeles no se leia) */
+:root[data-style=pixel] .working[data-tool=term] .acc { display: block !important; }
+.px { display: block; width: 30px; height: 30px; overflow: visible; }
+/* Paleta: sale de los colores de la mascota */
+.px .b { fill: var(--c); }
+.px .h { fill: color-mix(in oklab, var(--c), white 32%); }
+.px .s { fill: color-mix(in oklab, var(--c), black 20%); }
+.px .o { fill: color-mix(in oklab, var(--c), black 62%); }
+.px .k { fill: var(--ink); } .px .w { fill: #fff; } .px .r { fill: #ff6f86; } .px .v { fill: var(--ink); }
+.px .e { fill: var(--work); } .px .y { fill: #ffd66b; } .px .p { fill: #f3b6a0; } .px .g { fill: var(--done); }
+.px .beacon { animation: pxbeacon 1.6s steps(1) infinite; }
+@keyframes pxbeacon { 50% { opacity: .25; } }
+
+/* Caras segun el humor (por defecto: ojos abiertos, sonrisa y mofletes) */
+.px :is(.f-closed, .f-wait, .f-happy, .m-dot, .m-flat, .m-o, .m-open, .a-read, .a-edit, .a-term, .a-web) { display: none; }
+.idle .px .f-open, .working .px .f-open { animation: pxblink 4.6s steps(1) infinite; }
+.idle .px .f-closed, .working .px .f-closed { display: inline; animation: pxblink-in 4.6s steps(1) infinite; }
+@keyframes pxblink { 0%, 93% { opacity: 1; } 94%, 100% { opacity: 0; } }
+@keyframes pxblink-in { 0%, 93% { opacity: 0; } 94%, 100% { opacity: 1; } }
+:is(.sleep, .bored) .px .f-open, :is(.sleep, .bored) .px .m-smile, .sleep .px .ck { display: none; }
+:is(.sleep, .bored) .px .f-closed { display: inline; }
+.sleep .px .m-dot, .bored .px .m-flat { display: inline; }
+.waiting .px :is(.f-open, .m-smile) { display: none; }
+.waiting .px :is(.f-wait, .m-o) { display: inline; }
+.happy .px :is(.f-open, .m-smile) { display: none; }
+.happy .px :is(.f-happy, .m-open) { display: inline; }
+.working[data-tool=read] .px .a-read, .working[data-tool=edit] .px .a-edit,
+.working[data-tool=web] .px .a-web { display: inline; }
+
+/* Movimiento a saltos, como en una consola antigua */
+:root[data-style=pixel] :is(.idle, .sleep) .px-body { animation: pxbob 1.6s steps(1) infinite; }
+:root[data-style=pixel] .working .px-body { animation: pxhop .44s steps(1) infinite; }
+:root[data-style=pixel] .happy .px-body { animation: pxhop .8s steps(1) infinite; }
+:root[data-style=pixel] .waiting .px-body { animation: pxshake .3s steps(1) infinite; }
+:root[data-style=pixel] .waiting.impatient .px-body { animation: pxhop .2s steps(1) infinite; }
+:root[data-style=pixel] .bored .px-body { animation: pxsway 2.4s steps(1) infinite; }
+@keyframes pxbob { 50% { transform: translateY(.5px); } }
+@keyframes pxhop { 50% { transform: translateY(-1.5px); } }
+@keyframes pxshake { 0% { transform: translateX(-.5px); } 50% { transform: translateX(.5px); } }
+@keyframes pxsway { 0% { transform: translateX(0); } 50% { transform: translateX(.5px); } }
+:root[data-style=pixel] .fx { font-family: var(--mono); font-weight: 800; }
+:root[data-style=pixel] .sleep .fx { animation: zzz 2.6s steps(4) infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .pet, .pet * { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
 }

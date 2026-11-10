@@ -13,6 +13,7 @@ app.commandLine.appendSwitch('force-device-scale-factor', '1');
 app.whenReady().then(async () => {
   if (mode === 'video') await video(...args);
   else if (mode === 'settings') await settingsShot(...args);
+  else if (mode === 'page') await pageShot(...args);
   else await shotOf(...args);
   app.exit(0);
 });
@@ -23,26 +24,37 @@ async function waitFor(wc, expr, ms = 15000) {
   throw new Error(`Tiempo agotado esperando ${expr}`);
 }
 
-async function shotOf(name, w, h, out) {
+async function shotOf(name, w, h, out, style) {
   const win = new BrowserWindow({ width: +w * 2, height: +h * 2, show: false, webPreferences: { offscreen: true, zoomFactor: 2 } });
-  await win.loadFile(SCENE, { query: { shot: name } });
+  await win.loadFile(SCENE, { query: style ? { shot: name, style } : { shot: name } });
   await waitFor(win.webContents, 'window.SHOT_READY === true');
   const img = await win.webContents.capturePage();
   fs.writeFileSync(out, img.toPNG());
   console.log('captura', name, '->', out);
 }
 
+// Una pagina cualquiera de promo/ (por ejemplo la galeria), al doble de resolucion.
+async function pageShot(file, w, h, out, zoom = 2) {
+  const win = new BrowserWindow({ width: Math.round(w * zoom), height: Math.round(h * zoom), show: false, webPreferences: { offscreen: true, zoomFactor: +zoom } });
+  await win.loadFile(path.join(__dirname, file));
+  win.webContents.setZoomFactor(+zoom); // Electron recuerda el zoom por origen: se fija a mano
+  await waitFor(win.webContents, 'window.SHOT_READY === true');
+  await new Promise(r => setTimeout(r, 300));
+  fs.writeFileSync(out, (await win.webContents.capturePage()).toPNG());
+  console.log('pagina', file, '->', out);
+}
+
 // Ventana de ajustes real con el puente falso (datos de ejemplo), al doble de resolucion.
-async function settingsShot(page, out) {
+async function settingsShot(page, out, style) {
   const win = new BrowserWindow({ width: 1720, height: 1280, show: false,
     webPreferences: { offscreen: true, zoomFactor: 2, preload: path.join(__dirname, 'fake-preload.js'), contextIsolation: true, sandbox: true } });
-  await win.loadFile(path.join(__dirname, '..', 'settings.html'), { hash: page });
+  await win.loadFile(path.join(__dirname, '..', 'settings.html'), { hash: page, ...(style ? { query: { style } } : {}) });
   await new Promise(r => setTimeout(r, 1500));
   fs.writeFileSync(out, (await win.webContents.capturePage()).toPNG());
   console.log('ajustes', page, '->', out);
 }
 
-function video(dir, secs) {
+function video(dir, secs, style) {
   return new Promise(async (resolve, reject) => {
     fs.rmSync(dir, { recursive: true, force: true });
     fs.mkdirSync(dir, { recursive: true });
@@ -50,7 +62,7 @@ function video(dir, secs) {
     const win = new BrowserWindow({ width: 1080, height: 1920, show: false, webPreferences: { offscreen: true, zoomFactor: 2, backgroundThrottling: false } });
     const wc = win.webContents;
     wc.setFrameRate(FPS);
-    await win.loadFile(SCENE);
+    await win.loadFile(SCENE, style ? { query: { style } } : {});
     await waitFor(wc, 'window.SCENE_READY === true');
     await new Promise(r => setTimeout(r, 600));
 

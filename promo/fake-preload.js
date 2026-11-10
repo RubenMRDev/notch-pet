@@ -4,6 +4,7 @@ const { contextBridge } = require('electron');
 const config = {
   colors: { pet: '#f0916b', bg: '#0a0a0c', work: '#6aa8ff', wait: '#ffb340', done: '#5fd38d' },
   skin: 'blob', customImage: '', sound: true, notify: true, dnd: false, display: 'primary', hideFullscreen: true, visible: true,
+  style: new URLSearchParams(location.search).get('style') === 'pixel' ? 'pixel' : 'smooth',
   shortcut: 'CommandOrControl+Alt+N', openWith: 'claude', maxSessions: 3, finishAlert: 'multi', shortcutOk: true, autostart: true,
 };
 const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Notification', 'Stop', 'SessionEnd'];

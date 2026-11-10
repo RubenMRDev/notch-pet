@@ -61,6 +61,8 @@
     const root = document.documentElement;
     for (const [k, v] of Object.entries(c.colors)) root.style.setProperty(`--${k}`, v);
     root.dataset.skin = c.skin === 'image' && !c.customImage ? 'blob' : c.skin;
+    root.dataset.style = c.style === 'pixel' ? 'pixel' : 'smooth';
+    window.NP.pixelize();
     if (c.customImage) pet.querySelector('.custom').src = fileUrl(c.customImage);
   });
 
@@ -98,7 +100,7 @@
   }
 
   // ---------- Filas ----------
-  const BUSY = { working: 'Está trabajando. Podrás escribirle cuando termine.', waiting: 'Espera tu permiso en su ventana de Claude.' };
+  const BUSY = { working: 'Está trabajando: lo que escribas se enviará cuando termine.', waiting: 'Espera tu permiso: lo que escribas se enviará cuando termine.' };
   const indicator = s => s.status === 'working' ? '<i class="spin"></i>' : s.status === 'waiting' ? '<i class="pdot"></i>'
     : s.status === 'done' ? `<span class="ok">${ICON.check}</span>` : '<i class="ring"></i>';
   // ---------- Lo que te pide la sesion: permiso, pregunta o plan ----------
@@ -137,7 +139,8 @@
     const isOpen = s.id === openId;
     const raw = s.status === 'working' ? (s.tool ? friendly(s.tool) : toolName(s.detail) || 'Pensando…') : (s.detail || s.prompt || '');
     const asks = s.asks || [];
-    const busy = BUSY[s.status] || (s.sending && 'Enviando…');
+    const busy = s.sending ? 'Enviando…' : BUSY[s.status] || '';
+    const queued = s.queued;
     const note = notes.get(s.id);
     const canMore = isOpen && summary(raw) !== raw.trim();
     return `
@@ -157,14 +160,15 @@
           <div class="extra compose">
             <div class="atts">${attsHtml(s.id)}</div>
             <div class="field">
-              <button class="clip" aria-label="Adjuntar imagen" title="Adjuntar imagen (también puedes pegarla o arrastrarla)" ${busy ? 'disabled' : ''}>${ICON.image}</button>
+              <button class="clip" aria-label="Adjuntar imagen" title="Adjuntar imagen (también puedes pegarla o arrastrarla)">${ICON.image}</button>
               <input type="text" class="msg-in" placeholder="Escríbele a esta sesión…" aria-label="Mensaje para ${esc(nameOf(s))}"
-                value="${esc(drafts.get(s.id) || '')}" ${busy ? 'disabled' : ''} maxlength="4000">
-              <button class="send" aria-label="Enviar" title="Enviar (Enter)" ${busy ? 'disabled' : ''}>${ICON.send}</button>
+                value="${esc(drafts.get(s.id) || '')}" maxlength="4000">
+              <button class="send" aria-label="${busy ? 'Enviar cuando termine' : 'Enviar'}" title="${busy ? 'Enviar cuando termine (Enter)' : 'Enviar (Enter)'}">${ICON.send}</button>
               <input type="file" class="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
             </div>
           </div>
-          ${busy ? `<div class="extra hint">${esc(busy)}</div>` : note ? `<div class="extra hint ${note.err ? 'err' : 'ok'}">${esc(note.text)}</div>` : ''}` : ''}
+          ${queued ? `<div class="extra hint queued">En cola: «${esc(queued.text || 'imagen')}»${queued.images ? ` + ${queued.images} ${queued.images === 1 ? 'imagen' : 'imágenes'}` : ''}. Se enviará cuando termine. <button class="unqueue">Cancelar</button></div>`
+            : note ? `<div class="extra hint ${note.err ? 'err' : 'ok'}">${esc(note.text)}</div>` : busy ? `<div class="extra hint">${esc(busy)}</div>` : ''}` : ''}
       </li>`;
   }
 
@@ -181,7 +185,8 @@
     last = st;
     // Mientras escribes no se repinta la lista (perderias el foco); se aplica al terminar.
     // Mientras escribes o tienes el botón del ratón pulsado no se repinta: un clic no puede caer en una lista que cambia.
-    if (typing || pressed) { pending = st; return; }
+    // Solo cuenta como "escribiendo" si la ventana tiene de verdad el teclado: si Windows no se lo dio, la lista no se congela.
+    if ((typing && document.hasFocus()) || pressed) { pending = st; return; }
     const body = document.body;
     body.className = st.mood + (st.impatient ? ' impatient' : '');
     if (st.tool) body.dataset.tool = st.tool; else delete body.dataset.tool;
@@ -196,7 +201,13 @@
     body.style.setProperty('--fat', 1 + Math.min(st.stats.done || 0, 12) * .02);
     // Las que te piden algo, siempre arriba: que no se muevan bajo el ratón mientras vas a pulsar.
     const asking = st.sessions.filter(s => s.asks?.length);
-    const shown = [...asking, ...st.sessions.filter(s => !s.asks?.length).slice(0, Math.max(0, (st.max || 3) - asking.length))];
+    let shown = [...asking, ...st.sessions.filter(s => !s.asks?.length).slice(0, Math.max(0, (st.max || 3) - asking.length))];
+    // Con el notch abierto el orden no cambia (si no, la fila que vas a pulsar se mueve); las nuevas van al final.
+    if (shell.classList.contains('open')) {
+      for (const s of shown) if (!order.includes(s.id)) order.push(s.id);
+      const pos = s => (s.asks?.length ? -1 : order.indexOf(s.id));
+      shown = shown.slice().sort((a, b) => pos(a) - pos(b));
+    }
     const html = shown.length ? shown.map(s => rowHtml(s, st.now)).join('')
       : '<li class="empty"><b>Aún no hay sesiones</b>Abre una sesión de Claude Code y aparecerá aquí.</li>';
     if (html !== lastHtml) { $('list').innerHTML = html; lastHtml = html; }
@@ -206,7 +217,9 @@
   }
   api.on('state', render);
 
+  let order = [];
   api.on('open', o => {
+    if (!o) order = []; // al cerrarlo se vuelve a ordenar por actividad
     shell.classList.toggle('open', o);
     // Si estaba la tarjeta de "ha terminado", al pasar el raton se abre la lista con esa sesion desplegada.
     if (o && peekId) { openId = peekId; full = false; endPeek(); }
@@ -281,9 +294,10 @@
     drafts.delete(id); notes.delete(id); atts.delete(id);
     stopTyping();
     const r = await api.invoke('send', { id, text, images });
-    notes.set(id, r.ok
+    notes.set(id, r.queued ? null : r.ok
       ? { text: r.denied ? `Hecho. ${r.denied} ${r.denied === 1 ? 'acción necesitaba' : 'acciones necesitaban'} tu permiso y no se hizo.` : 'Hecho. La respuesta está arriba.' }
       : { text: r.error, err: true });
+    if (!notes.get(id)) notes.delete(id);
     if (last) render(last);
   }
   function stopTyping() {
@@ -294,8 +308,13 @@
   }
   const list = $('list');
   // Boton del raton pulsado dentro de la lista: se congela el repintado hasta soltarlo.
-  list.addEventListener('pointerdown', () => { pressed = true; });
-  window.addEventListener('pointerup', () => setTimeout(() => { pressed = false; if (pending && !typing) { const p = pending; pending = null; render(p); } }, 0));
+  let pressTimer;
+  const release = () => { clearTimeout(pressTimer); setTimeout(() => { pressed = false; if (pending && !(typing && document.hasFocus())) { const p = pending; pending = null; render(p); } }, 0); };
+  list.addEventListener('pointerdown', () => { pressed = true; clearTimeout(pressTimer); pressTimer = setTimeout(release, 1500); });
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
+  // Si la ventana pierde el teclado, se deja de "escribir" (y la lista vuelve a repintarse).
+  window.addEventListener('blur', () => { if (typing) { document.activeElement?.blur(); stopTyping(); } });
   const TYPED = '.msg-in, .own';
   list.addEventListener('focusin', e => { if (e.target.matches(TYPED)) { typing = true; api.send('typing', true); } });
   list.addEventListener('focusout', e => { if (e.target.matches(TYPED)) setTimeout(stopTyping, 0); });
@@ -326,6 +345,8 @@
   // La caja necesita que la ventana acepte el foco: se lo pedimos al tocarla.
   list.addEventListener('mousedown', e => { if (e.target.matches('.msg-in:not(:disabled), .own')) api.send('typing', true); });
   list.addEventListener('click', e => {
+    const unq = e.target.closest('.unqueue');
+    if (unq) { api.invoke('send:cancel', unq.closest('.row').dataset.id).then(() => last && render(last)); return; }
     const go = e.target.closest('.go');
     if (go) return api.send('open-session', go.dataset.id);
     if (e.target.closest('.send')) return send(e.target.closest('.row'));

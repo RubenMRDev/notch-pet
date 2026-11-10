@@ -33,7 +33,7 @@ process.on('unhandledRejection', e => log('error', 'unhandledRejection', e));
 // --- Config y estadisticas ---
 const DEFAULTS = {
   colors: { pet: '#f0916b', bg: '#0a0a0c', work: '#6aa8ff', wait: '#ffb340', done: '#5fd38d' },
-  skin: 'blob', customImage: '',
+  skin: 'blob', customImage: '', style: 'smooth',
   sound: true, notify: true, dnd: false,
   display: 'primary', hideFullscreen: true, visible: true,
   shortcut: 'CommandOrControl+Alt+N', openWith: 'claude',
@@ -53,7 +53,10 @@ const send = (ch, ...a) => { if (win && !win.isDestroyed()) win.webContents.send
 const pending = new Map(); // id -> { id, session_id, tool, input, suggestions, fp, summary, res }
 function push() {
   const v = view(sessions);
-  for (const s of v.sessions) s.asks = [...pending.values()].filter(p => p.session_id === s.id).map(p => ({ id: p.id, ...p.summary }));
+  for (const s of v.sessions) {
+    s.asks = [...pending.values()].filter(p => p.session_id === s.id).map(p => ({ id: p.id, ...p.summary }));
+    s.queued = s.queued ? { text: s.queued.text, images: s.queued.images.length } : null;
+  }
   send('state', { ...v, ...testMood, stats, max: config.maxSessions });
 }
 // Cierra una peticion: con decision se la pasa a Claude; sin ella, Claude sigue con su dialogo de siempre.
@@ -71,8 +74,9 @@ function syncTranscripts() {
     const s = sessions.get(r.id);
     if (s && (s.sending || r.at <= s.at + 1500)) continue;
     const prevStatus = s && view(new Map([[s.id, s]])).sessions[0].status;
-    sessions.set(r.id, { ...s, ...r, waitingSince: s?.waitingSince });
+    sessions.set(r.id, { ...s, ...r, waitingSince: s?.waitingSince, queued: s?.queued || null });
     maybeAnnounce(prevStatus, sessions.get(r.id));
+    flushQueue(sessions.get(r.id));
     changed = true;
   }
   if (changed) push();
@@ -263,7 +267,6 @@ function sendToSession({ id, text, images } = {}) {
     const s = sessions.get(id);
     const fail = error => { if (s) { s.sending = false; push(); } resolve({ ok: false, error }); };
     if (!s || !SESSION_ID.test(id)) return fail('No encuentro esa sesión.');
-    if (s.sending || s.status === 'working' || s.status === 'waiting') return fail('La sesión está ocupada. Espera a que termine.');
     text = String(text || '').trim();
     images = Array.isArray(images) ? images : [];
     if (!text && !images.length) return fail('Escribe algo o adjunta una imagen antes de enviar.');
@@ -274,6 +277,8 @@ function sendToSession({ id, text, images } = {}) {
       if (im.data.length * 0.75 > 5 * 1024 * 1024) return fail('Cada imagen puede pesar como mucho 5 MB.');
     }
     if (!s.cwd || !fs.existsSync(s.cwd)) return fail('La carpeta de la sesión ya no existe.');
+    // Ocupada: se guarda y sale sola en cuanto termine (flushQueue).
+    if (s.sending || s.status === 'working' || s.status === 'waiting') { s.queued = { text, images }; push(); return resolve({ ok: true, queued: true }); }
 
     const label = text || (images.length === 1 ? '[imagen]' : `[${images.length} imágenes]`);
     Object.assign(s, { sending: true, status: 'working', prompt: label + (text && images.length ? ` · ${images.length} ${images.length === 1 ? 'imagen' : 'imágenes'}` : ''), detail: 'Pensando…', tool: '', at: Date.now() });
@@ -299,15 +304,33 @@ function sendToSession({ id, text, images } = {}) {
         log('warn', `claude -p devolvió algo inesperado: ${(err || out).slice(0, 300)}`);
         return fail((err || 'claude no respondió.').trim().slice(0, 300));
       }
+      if (r.is_error) {
+        // El motivo puede venir en result, en errors o como una linea de texto suelta antes del JSON
+        const loose = `${out}\n${err}`.split('\n').map(l => l.trim()).find(l => l && !l.startsWith('{')) || '';
+        const why = r.result || (r.errors || []).join(' ') || loose || 'Claude no pudo responder.';
+        Object.assign(s, { sending: false, status: 'done', at: Date.now() });
+        push();
+        if (/authenticat|login|oauth/i.test(why)) return resolve({ ok: false, error: 'Claude Code no tiene la sesión iniciada. Abre una terminal, ejecuta claude y escribe /login.' });
+        if (/No conversation found/i.test(why)) return resolve({ ok: false, error: 'Claude Code no encuentra esta conversación en tu equipo.' });
+        return resolve({ ok: false, error: why.slice(0, 300) });
+      }
       Object.assign(s, { sending: false, status: 'done', detail: r.result || '', at: Date.now() });
       push();
-      if (r.is_error) {
-        const login = /authenticat|login|oauth/i.test(r.result || '');
-        return resolve({ ok: false, error: login ? 'Claude Code no tiene la sesión iniciada. Abre una terminal, ejecuta claude y escribe /login.' : r.result });
-      }
       resolve({ ok: true, denied: (r.permission_denials || []).length });
     });
     p.stdin.end(JSON.stringify({ type: 'user', message: { role: 'user', content } }) + '\n');
+  });
+}
+
+// Al terminar una sesion, si le dejaste un mensaje en cola, se envia.
+function flushQueue(s) {
+  if (!s?.queued || s.sending || s.status === 'working' || s.status === 'waiting') return;
+  const q = s.queued;
+  s.queued = null;
+  sendToSession({ id: s.id, ...q }).then(r => {
+    if (r.ok) return;
+    log('warn', `Mensaje en cola no enviado: ${r.error}`);
+    s.detail = `No se pudo enviar tu mensaje en cola: ${r.error}`; push();
   });
 }
 
@@ -362,7 +385,10 @@ on('peekH', h => { if (peek) peek.h = Math.min(H, Math.max(36, Number(h) || 130)
 on('typing', t => {
   if (!!t === typing) return;
   typing = !!t;
-  if (typing) { win.setFocusable(true); win.focus(); } else { win.blur(); win.setFocusable(false); }
+  if (typing) {
+    win.setFocusable(true); win.focus();
+    setTimeout(() => { if (typing && !win.isFocused()) { win.show(); win.focus(); if (!win.isFocused()) log('warn', 'Windows no dio el foco del teclado al notch'); } }, 150);
+  } else { win.blur(); win.setFocusable(false); }
 });
 on('quit', () => app.quit());
 on('open-settings', page => openSettings(page));
@@ -378,6 +404,7 @@ on('test-alert', () => {
 });
 
 handle('send', sendToSession);
+handle('send:cancel', id => { const s = sessions.get(id); if (s) { s.queued = null; push(); } return { ok: true }; });
 handle('permission:decide', ({ id, choice } = {}) => {
   const p = pending.get(id);
   if (!p) return { ok: false, error: 'Esta petición ya no está abierta (quizá la respondiste en Claude).' };
@@ -475,6 +502,7 @@ function startServer() {
         const s = sessions.get(e.session_id);
         if (s?.status === 'waiting' && prev?.status !== 'waiting') alertWaiting(s);
         if (s) maybeAnnounce(prev?.status, s);
+        if (s) flushQueue(s);
         push();
       } catch (err) { log('warn', 'Evento de hook no válido', err); }
       res.end('ok');
