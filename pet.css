@@ -126,6 +126,8 @@
 .pxslot { display: none; }
 :root[data-style=pixel] .pxslot { display: block; position: absolute; left: 0; bottom: 0; width: 30px; height: 30px; }
 :root[data-style=pixel] .body { display: none; }
+/* En pixeles no se estira al engordar: se deformaria el dibujo */
+:root[data-style=pixel] .pet { --fat: 1; }
 :root[data-style=pixel] [data-skin=image] .pxslot, :root[data-style=pixel][data-skin=image] .pxslot { display: none; }
 :root[data-style=pixel] .acc { display: none !important; }
 /* La terminal se queda con su >_ normal tambien en 8 bits (en pixeles no se leia) */

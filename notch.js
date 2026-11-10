@@ -172,6 +172,24 @@
       </li>`;
   }
 
+  // Caja de texto con el foco antes de repintar, para devolverla tal cual despues.
+  function focusState() {
+    const a = document.activeElement;
+    if (!a || !a.matches?.('.msg-in, .own')) return null;
+    return { row: a.closest('.row')?.dataset.id, ask: a.closest('.askbox')?.dataset.ask, q: a.dataset.q,
+      own: a.matches('.own'), value: a.value, start: a.selectionStart, end: a.selectionEnd };
+  }
+  function restoreFocus(k) {
+    if (!k) return;
+    const list = $('list');
+    const el = k.own ? list.querySelector(`.askbox[data-ask="${CSS.escape(k.ask || '')}"] .own[data-q="${k.q}"]`)
+      : list.querySelector(`.row[data-id="${CSS.escape(k.row || '')}"] .msg-in`);
+    if (!el) return;
+    el.value = k.value;
+    el.focus({ preventScroll: true });
+    try { el.setSelectionRange(k.start, k.end); } catch {}
+  }
+
   // Alto del notch abierto = barra + panel. La ventana mide 460: lo que no quepa, hace scroll en la lista.
   function measure() {
     requestAnimationFrame(() => {
@@ -186,7 +204,9 @@
     // Mientras escribes no se repinta la lista (perderias el foco); se aplica al terminar.
     // Mientras escribes o tienes el botón del ratón pulsado no se repinta: un clic no puede caer en una lista que cambia.
     // Solo cuenta como "escribiendo" si la ventana tiene de verdad el teclado: si Windows no se lo dio, la lista no se congela.
-    if ((typing && document.hasFocus()) || pressed) { pending = st; return; }
+    // Solo se espera mientras tienes el boton del raton pulsado (como mucho 1,5 s): un clic no cae en una lista que cambia.
+    // Escribiendo NO se congela: se repinta y se te devuelve la caja con su texto, el cursor y el foco.
+    if (pressed) { pending = st; return; }
     const body = document.body;
     body.className = st.mood + (st.impatient ? ' impatient' : '');
     if (st.tool) body.dataset.tool = st.tool; else delete body.dataset.tool;
@@ -210,7 +230,12 @@
     }
     const html = shown.length ? shown.map(s => rowHtml(s, st.now)).join('')
       : '<li class="empty"><b>Aún no hay sesiones</b>Abre una sesión de Claude Code y aparecerá aquí.</li>';
-    if (html !== lastHtml) { $('list').innerHTML = html; lastHtml = html; }
+    if (html !== lastHtml) {
+      const keep = focusState();
+      $('list').innerHTML = html;
+      lastHtml = html;
+      restoreFocus(keep);
+    }
     const { done = 0, tools = 0, workMs = 0 } = st.stats || {};
     $('stats').textContent = `Hoy · ${done} ${done === 1 ? 'terminada' : 'terminadas'} · ${tools} herramientas · ${dur(workMs)} trabajando`;
     measure();
@@ -309,7 +334,7 @@
   const list = $('list');
   // Boton del raton pulsado dentro de la lista: se congela el repintado hasta soltarlo.
   let pressTimer;
-  const release = () => { clearTimeout(pressTimer); setTimeout(() => { pressed = false; if (pending && !(typing && document.hasFocus())) { const p = pending; pending = null; render(p); } }, 0); };
+  const release = () => { clearTimeout(pressTimer); setTimeout(() => { pressed = false; if (pending) { const p = pending; pending = null; render(p); } }, 0); };
   list.addEventListener('pointerdown', () => { pressed = true; clearTimeout(pressTimer); pressTimer = setTimeout(release, 1500); });
   window.addEventListener('pointerup', release);
   window.addEventListener('pointercancel', release);
@@ -317,7 +342,8 @@
   window.addEventListener('blur', () => { if (typing) { document.activeElement?.blur(); stopTyping(); } });
   const TYPED = '.msg-in, .own';
   list.addEventListener('focusin', e => { if (e.target.matches(TYPED)) { typing = true; api.send('typing', true); } });
-  list.addEventListener('focusout', e => { if (e.target.matches(TYPED)) setTimeout(stopTyping, 0); });
+  // Al repintar se cambia la caja por otra igual: solo se suelta el teclado si ya no queda ninguna con el foco.
+  list.addEventListener('focusout', e => { if (e.target.matches(TYPED)) setTimeout(() => { if (!document.activeElement?.matches?.(TYPED)) stopTyping(); }, 0); });
   list.addEventListener('input', e => {
     if (e.target.matches('.own')) {
       const askId = e.target.closest('.askbox').dataset.ask, sel = picks.get(askId) || {};
@@ -364,7 +390,9 @@
     if (e.target.closest('.askbox')) return;
     if (e.target.closest('.compose, .hint')) return;
     if (e.target.closest('.more')) { full = !full; return render(last); }
-    if (e.target.closest('.detail, .ask') && getSelection().toString()) return; // dejar copiar texto
+    // Si estas seleccionando texto de esta misma fila, el clic es para copiar, no para abrirla.
+    const sel = getSelection(), box = e.target.closest('.detail, .ask');
+    if (box && sel.toString() && box.contains(sel.anchorNode)) return;
     const row = e.target.closest('.row'); if (!row) return;
     openId = openId === row.dataset.id ? null : row.dataset.id;
     full = false;
