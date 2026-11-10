@@ -10,7 +10,10 @@ const IMPATIENT_MS = 5 * 60e3;    // 5 min esperando tu permiso -> se impacienta
 const NOT_PROMPT = /^\s*<(local-command|command-name|command-message|command-args|task-notification|system-reminder)/;
 
 const isIdleNotice = e =>
-  e.notification_type === 'idle_prompt' || /waiting for your input/i.test(e.message || '');
+  e.notification_type === 'idle_prompt' || /waiting for your input/i.test(text(e.message));
+
+// Lo que llega de los hooks puede no ser texto (bloques, numeros, null): siempre se guarda como texto.
+const text = v => (typeof v === 'string' ? v : v == null ? '' : Array.isArray(v) ? v.map(x => (typeof x === 'string' ? x : x?.text || '')).join('\n') : String(v?.text ?? v));
 
 // Devuelve como estaba la sesion antes del evento (para avisos y estadisticas).
 function apply(sessions, e, now = Date.now()) {
@@ -21,19 +24,19 @@ function apply(sessions, e, now = Date.now()) {
   if (e.hook_event_name === 'SessionEnd') { sessions.delete(id); return prev; }
 
   const s = old || { id, status: 'idle', detail: '', prompt: '', tool: '' };
-  s.cwd = e.cwd || s.cwd;
+  s.cwd = text(e.cwd) || s.cwd;
   s.at = now;
   switch (e.hook_event_name) {
     // Los avisos internos (tareas en segundo plano, comandos locales) no son peticiones tuyas.
-    case 'UserPromptSubmit': s.status = 'working'; if (!NOT_PROMPT.test(e.prompt || '')) s.prompt = e.prompt || ''; s.detail = 'Pensando…'; s.tool = ''; break;
-    case 'PreToolUse': s.status = 'working'; s.detail = e.tool_name || ''; s.tool = e.tool_name || ''; break;
+    case 'UserPromptSubmit': s.status = 'working'; if (!NOT_PROMPT.test(text(e.prompt))) s.prompt = text(e.prompt); s.detail = 'Pensando…'; s.tool = ''; break;
+    case 'PreToolUse': s.status = 'working'; s.detail = text(e.tool_name); s.tool = text(e.tool_name); break;
     case 'PostToolUse': s.status = 'working'; break;
     case 'Notification':
       if (isIdleNotice(e)) break;
       if (s.status !== 'waiting') s.waitingSince = now;
-      s.status = 'waiting'; s.detail = e.message || '';
+      s.status = 'waiting'; s.detail = text(e.message);
       break;
-    case 'Stop': s.status = 'done'; s.detail = e.last_assistant_message || 'Terminado'; s.tool = ''; break;
+    case 'Stop': s.status = 'done'; s.detail = text(e.last_assistant_message) || 'Terminado'; s.tool = ''; break;
   }
   sessions.set(id, s);
   return prev;
@@ -111,6 +114,10 @@ if (require.main === module) {
   assert.strictEqual(view(m, SLEEP_MS + 1).mood, 'sleep');
   ev('UserPromptSubmit', { prompt: '<task-notification><task-id>x</task-id>' });
   assert.strictEqual(m.get('a').prompt, 'hola', 'un aviso interno no pisa tu peticion');
+  ev('Stop', { last_assistant_message: [{ type: 'text', text: 'en bloques' }] });
+  assert.strictEqual(m.get('a').detail, 'en bloques', 'los bloques se guardan como texto');
+  ev('PreToolUse', { tool_name: 42 });
+  assert.strictEqual(m.get('a').tool, '42');
   ev('SessionEnd');
   assert.strictEqual(view(m, 0).sessions.length, 0);
 

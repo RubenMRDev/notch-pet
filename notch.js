@@ -11,8 +11,14 @@
   $('gear').onclick = () => api.send('open-settings');
   $('quit').onclick = () => api.send('quit');
   const pet = document.querySelector('#petslot .pet');
+  // Un fallo al tratar un mensaje de la app no puede dejar el notch congelado: se apunta en el registro y sigue.
+  const on = (ch, fn) => api.on(ch, (...a) => { try { fn(...a); } catch (e) { console.error(`notch[${ch}]: ${e?.stack || e}`); } });
+  window.addEventListener('error', e => console.error(`notch: ${e.message} (${e.filename}:${e.lineno})`));
+  window.addEventListener('unhandledrejection', e => console.error(`notch: promesa ${e.reason?.stack || e.reason}`));
+  // Cualquier dato de una sesion se trata como texto, venga como venga (numero, bloques, objeto, vacio).
+  const str = v => (typeof v === 'string' ? v : v == null ? '' : Array.isArray(v) ? v.map(x => (typeof x === 'string' ? x : x?.text || '')).join('\n') : typeof v === 'object' ? (v.text ?? '') + '' : String(v));
 
-  let pressed = false, lastHtml = '';
+  let pressed = false, lastHtml = '', lastMove = 0, moveTimer;
   let last = null, openId = null, full = false, typing = false, pending = null, peekId = null;
   const drafts = new Map(), notes = new Map();
   const picks = new Map(); // askId -> { [indice de pregunta]: Set de opciones | texto propio }
@@ -21,7 +27,7 @@
 
   // ---------- Utilidades de texto ----------
   const folder = p => (p || '').split(/[\\/]/).filter(Boolean).pop() || 'sesión';
-  const nameOf = s => s.title || folder(s.cwd);
+  const nameOf = s => str(s?.title) || folder(str(s?.cwd));
   const mins = ms => Math.max(0, Math.round(ms / 60e3));
   const ago = (now, t) => { const m = mins(now - t); return m < 1 ? 'ahora' : m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} d`; };
   const dur = ms => { const m = mins(ms); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`; };
@@ -30,11 +36,11 @@
   const TOOL = [[/^(Read|LS|NotebookRead)$/, 'Leyendo archivos'], [/^(Grep|Glob)$/, 'Buscando en el código'],
     [/^(Edit|MultiEdit|Write|NotebookEdit)$/, 'Editando archivos'], [/^(Bash|PowerShell)$/, 'Ejecutando comandos'],
     [/^(WebFetch|WebSearch)$/, 'Buscando en la web'], [/^(Task|Agent)$/, 'Lanzando un agente'], [/^TodoWrite$/, 'Organizando tareas']];
-  const toolName = t => (t || '').replace(/^mcp__.+?__/, '');
+  const toolName = t => str(t).replace(/^mcp__.+?__/, '');
   const friendly = t => (TOOL.find(([re]) => re.test(toolName(t))) || [])[1] || toolName(t);
   // Primer parrafo del ultimo mensaje (los bloques de codigo se quedan en [código]).
   const summary = t => {
-    const p = (t || '').replace(/```[\s\S]*?```/g, '[código]').split(/\n\s*\n/).find(x => x.trim()) || '';
+    const p = str(t).replace(/```[\s\S]*?```/g, '[código]').split(/\n\s*\n/).find(x => x.trim()) || '';
     return p.length > 240 ? p.slice(0, 239) + '…' : p.trim();
   };
   const plain = t => summary(t).replace(/[*_`#>]/g, '');
@@ -42,7 +48,7 @@
   // ponytail: cubre lo que usa Claude (codigo, negrita, cursiva, titulos, listas, enlaces); sin tablas.
   function md(t) {
     const blocks = [];
-    let h = esc(t).replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => `\u0000${blocks.push(code.replace(/\n$/, '')) - 1}\u0000`);
+    let h = esc(str(t)).replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => `\u0000${blocks.push(code.replace(/\n$/, '')) - 1}\u0000`);
     h = h
       .replace(/`([^`\n]+)`/g, '<code>$1</code>')
       .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
@@ -57,7 +63,7 @@
   }
 
   // ---------- Config ----------
-  api.on('config', c => {
+  on('config', c => {
     const root = document.documentElement;
     for (const [k, v] of Object.entries(c.colors)) root.style.setProperty(`--${k}`, v);
     root.dataset.skin = c.skin === 'image' && !c.customImage ? 'blob' : c.skin;
@@ -79,7 +85,7 @@
     }
     setTimeout(() => ctx.close(), 1200);
   }
-  api.on('chime', kind => tones(kind === 'done' ? [[784, 0], [1046, .1], [1318, .2]] : [[880, 0], [1320, .12]]));
+  on('chime', kind => tones(kind === 'done' ? [[784, 0], [1046, .1], [1318, .2]] : [[880, 0], [1320, .12]]));
 
   // ---------- Barra ----------
   function header(st) {
@@ -109,18 +115,18 @@
     const sel = picks.get(a.id) || {};
     const head = `<div class="ask-head">${esc(a.title)}</div>`;
     if (a.kind === 'question') {
-      const qs = a.questions.map((q, qi) => {
+      const qs = (a.questions || []).map((q, qi) => {
         const chosen = sel[qi];
-        const opts = q.options.map(o => {
+        const opts = (q.options || []).map(o => {
           const on = chosen instanceof Set ? chosen.has(o.label) : chosen === o.label;
           return `<button class="opt ${on ? 'on' : ''}" data-q="${qi}" data-label="${esc(o.label)}" ${o.description ? `title="${esc(o.description)}"` : ''}>${esc(o.label)}</button>`;
         }).join('');
-        const own = typeof chosen === 'string' && !q.options.some(o => o.label === chosen) ? chosen : '';
+        const own = typeof chosen === 'string' && !(q.options || []).some(o => o.label === chosen) ? chosen : '';
         return `<div class="q"><p>${esc(q.question)}${q.multiSelect ? ' <span class="hintline">(puedes marcar varias)</span>' : ''}</p>
           <div class="opts">${opts}</div>
           <input class="own" data-q="${qi}" placeholder="Otra respuesta…" value="${esc(own)}" maxlength="500" aria-label="Otra respuesta"></div>`;
       }).join('');
-      const single = a.questions.length === 1 && !a.questions[0].multiSelect;
+      const single = (a.questions || []).length === 1 && !a.questions[0].multiSelect;
       return `<div class="extra askbox" data-ask="${esc(a.id)}">${head}${qs}
         <div class="ask-actions"><button class="abtn" data-act="deny">Saltar</button>${single ? '' : '<button class="abtn primary" data-act="answer">Responder</button>'}</div>${err(a)}</div>`;
     }
@@ -135,9 +141,17 @@
   const attsHtml = id => (atts.get(id) || []).map((a, i) =>
     `<span class="att"><img src="${a.url}" alt="Imagen adjunta ${i + 1}"><button class="att-x" data-i="${i}" aria-label="Quitar imagen ${i + 1}">${ICON.close}</button></span>`).join('');
 
+  function safeRow(s, now) {
+    try { return rowHtml(s, now); } catch (e) {
+      console.error(`notch: no se pudo pintar la sesión ${s?.id}: ${e?.stack || e}`);
+      return `<li class="row ${esc(str(s?.status))}" data-id="${esc(str(s?.id))}"><span class="st"><i class="ring"></i></span>
+        <div class="main"><div class="top"><span class="name">${esc(nameOf(s) || 'Sesión')}</span></div><div class="detail">No se pudo mostrar esta sesión.</div></div>
+        <span class="ago"></span><button class="go" data-id="${esc(str(s?.id))}" aria-label="Abrir sesión">${ICON.open}</button></li>`;
+    }
+  }
   function rowHtml(s, now) {
     const isOpen = s.id === openId;
-    const raw = s.status === 'working' ? (s.tool ? friendly(s.tool) : toolName(s.detail) || 'Pensando…') : (s.detail || s.prompt || '');
+    const raw = s.status === 'working' ? (s.tool ? friendly(s.tool) : toolName(s.detail) || 'Pensando…') : (str(s.detail) || str(s.prompt));
     const asks = s.asks || [];
     const busy = s.sending ? 'Enviando…' : BUSY[s.status] || '';
     const queued = s.queued;
@@ -199,7 +213,8 @@
     });
   }
 
-  function render(st) {
+  // force: lo pide el usuario (un clic, enviar, responder). Las actualizaciones que llegan solas no son force.
+  function render(st, force = true) {
     last = st;
     // Mientras escribes no se repinta la lista (perderias el foco); se aplica al terminar.
     // Mientras escribes o tienes el botón del ratón pulsado no se repinta: un clic no puede caer en una lista que cambia.
@@ -207,6 +222,14 @@
     // Solo se espera mientras tienes el boton del raton pulsado (como mucho 1,5 s): un clic no cae en una lista que cambia.
     // Escribiendo NO se congela: se repinta y se te devuelve la caja con su texto, el cursor y el foco.
     if (pressed) { pending = st; return; }
+    // Mientras mueves el raton por la lista, lo que llega solo espera (hasta 0,7 s sin moverlo): las filas no saltan
+    // justo cuando vas a pulsar. Tus clics se aplican al momento.
+    if (!force && shell.classList.contains('open') && Date.now() - lastMove < 700) {
+      pending = st;
+      clearTimeout(moveTimer);
+      moveTimer = setTimeout(() => { if (pending) { const p = pending; pending = null; render(p, false); } }, 720 - (Date.now() - lastMove));
+      return;
+    }
     const body = document.body;
     body.className = st.mood + (st.impatient ? ' impatient' : '');
     if (st.tool) body.dataset.tool = st.tool; else delete body.dataset.tool;
@@ -228,7 +251,7 @@
       const pos = s => (s.asks?.length ? -1 : order.indexOf(s.id));
       shown = shown.slice().sort((a, b) => pos(a) - pos(b));
     }
-    const html = shown.length ? shown.map(s => rowHtml(s, st.now)).join('')
+    const html = shown.length ? shown.map(s => safeRow(s, st.now)).join('')
       : '<li class="empty"><b>Aún no hay sesiones</b>Abre una sesión de Claude Code y aparecerá aquí.</li>';
     if (html !== lastHtml) {
       const keep = focusState();
@@ -240,10 +263,18 @@
     $('stats').textContent = `Hoy · ${done} ${done === 1 ? 'terminada' : 'terminadas'} · ${tools} herramientas · ${dur(workMs)} trabajando`;
     measure();
   }
-  api.on('state', render);
+  on('state', st => render(st, false));
+  setInterval(() => {
+    if (!last || pressed) return;
+    const shownOpen = document.querySelector('#list .row.expanded')?.dataset.id || null;
+    const exists = openId && document.querySelector(`#list .row[data-id="${CSS.escape(openId)}"]`);
+    if (exists && shownOpen !== openId) { console.error(`notch: lista desincronizada (abierta ${openId}, se ve ${shownOpen}); se repinta`); lastHtml = ''; render(last); }
+  }, 2000);
+  // Diagnostico: estado interno del notch (lo usan los tests)
+  window.__notch = () => ({ pressed, typing, pending: !!pending, openId, peekId, open: shell.classList.contains('open'), rows: [...document.querySelectorAll('#list .row')].map(r => ({ id: r.dataset.id, expanded: r.classList.contains('expanded') })) });
 
   let order = [];
-  api.on('open', o => {
+  on('open', o => {
     if (!o) order = []; // al cerrarlo se vuelve a ordenar por actividad
     shell.classList.toggle('open', o);
     // Si estaba la tarjeta de "ha terminado", al pasar el raton se abre la lista con esa sesion desplegada.
@@ -270,10 +301,10 @@
     });
   }
   function endPeek() { peekId = null; shell.classList.remove('peek'); if (last) render(last); }
-  api.on('finished', id => { peekId = id; showPeek(); });
+  on('finished', id => { peekId = id; showPeek(); });
   // Llega una peticion: aviso con la tarjeta; al pasar el raton, esa sesion sale con sus botones.
-  api.on('asked', id => { peekId = id; showPeek(); });
-  api.on('peek-end', () => { if (peekId) endPeek(); });
+  on('asked', id => { peekId = id; showPeek(); });
+  on('peek-end', () => { if (peekId) endPeek(); });
 
   // ---------- Responder lo que pide la sesion ----------
   const findAsk = id => { for (const x of last?.sessions || []) for (const a of x.asks || []) if (a.id === id) return a; return null; };
@@ -340,6 +371,7 @@
   window.addEventListener('pointercancel', release);
   // Si la ventana pierde el teclado, se deja de "escribir" (y la lista vuelve a repintarse).
   window.addEventListener('blur', () => { if (typing) { document.activeElement?.blur(); stopTyping(); } });
+  list.addEventListener('pointermove', () => { lastMove = Date.now(); });
   const TYPED = '.msg-in, .own';
   list.addEventListener('focusin', e => { if (e.target.matches(TYPED)) { typing = true; api.send('typing', true); } });
   // Al repintar se cambia la caja por otra igual: solo se suelta el teclado si ya no queda ninguna con el foco.

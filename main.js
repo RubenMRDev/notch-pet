@@ -445,7 +445,7 @@ handle('hooks:uninstall', () => hooks.uninstall());
 // ponytail: sondeo del cursor cada 80 ms; el reenvio de eventos de Electron en Windows no es fiable.
 // Mientras esta abierta, toda la ventana captura clics aunque sea transparente.
 function watchCursor() {
-  if (!win?.isVisible()) return;
+  if (!win || win.isDestroyed() || !win.isVisible()) return; // al cerrar para actualizar, la ventana ya no existe
   const p = screen.getCursorScreenPoint();
   if (config.display === 'follow' && !open && screen.getDisplayNearestPoint(p).id !== displayId) place();
   const b = win.getBounds();

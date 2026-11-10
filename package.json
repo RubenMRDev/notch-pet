@@ -1,15 +1,17 @@
 {
   "name": "notch-pet",
   "productName": "Notch Pet",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Una mascota en el borde de tu pantalla que vigila tus sesiones de Claude Code",
   "author": "Ruben",
   "private": true,
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node state.js && node hooks.js && node recover.js && node updater.js && node asks.js",
-    "dist": "node icon.js && electron-builder --win nsis --publish never"
+    "test": "node state.js && node hooks.js && node recover.js && node updater.js && node asks.js && electron test/ui.test.js",
+    "dist": "node icon.js && electron-builder --win nsis --publish never",
+    "test:ui": "electron test/ui.test.js",
+    "test:mouse": "node test/real-mouse.js 2"
   },
   "build": {
     "appId": "com.notchpet.app",
