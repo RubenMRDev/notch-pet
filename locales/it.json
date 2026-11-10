@@ -243,5 +243,6 @@
   "check_failed": "Impossibile verificare: {error}",
   "retry": "Riprova",
   "settings_load_failed": "Impossibile caricare le impostazioni: {error}",
-  "settings_json_read_failed": "Impossibile leggere il tuo settings.json: {error}"
+  "settings_json_read_failed": "Impossibile leggere il tuo settings.json: {error}",
+  "doodle": "Scarabocchio"
 }

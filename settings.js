@@ -45,6 +45,7 @@
     root.dataset.style = c.style === 'pixel' ? 'pixel' : 'smooth';
     for (const b of $('styles').children) b.setAttribute('aria-pressed', b.dataset.style === root.dataset.style);
     window.NP.pixelize();
+    $('styles').hidden = skin === 'doodle'; // el garabato tiene su propio trazo: suave u 8 bits no le cambian
     for (const img of document.querySelectorAll('.custom')) if (c.customImage) img.src = fileUrl(c.customImage);
     for (const b of $('skins').children) b.setAttribute('aria-checked', b.dataset.skin === skin);
     $('skins').querySelector('[data-skin=image] .tile').innerHTML = c.customImage ? PET : `<span class="add">${ICON.image}</span>`;
@@ -80,7 +81,7 @@
   $('testNotch').onclick = () => api.send('test-mood', { mood: mood === 'impatient' ? 'waiting' : mood, impatient: mood === 'impatient', tool: mood === 'working' ? tool : '' });
 
   // ---------- Aspectos ----------
-  const SKINS = [['blob', t('blob')], ['cat', t('cat')], ['ghost', t('ghost')], ['robot', t('robot')], ['image', t('image')]];
+  const SKINS = [['blob', t('blob')], ['cat', t('cat')], ['ghost', t('ghost')], ['robot', t('robot')], ['doodle', t('doodle')], ['image', t('image')]];
   $('skins').innerHTML = SKINS.map(([k, name]) =>
     `<button class="skin" role="radio" data-skin="${k}" aria-checked="false"><span class="tile idle">${PET}</span>${esc(name)}</button>`).join('');
   $('skins').addEventListener('click', async e => {

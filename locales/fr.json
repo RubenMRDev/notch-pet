@@ -243,5 +243,6 @@
   "check_failed": "Vérification impossible : {error}",
   "retry": "Réessayer",
   "settings_load_failed": "Impossible de charger les réglages : {error}",
-  "settings_json_read_failed": "Impossible de lire votre settings.json : {error}"
+  "settings_json_read_failed": "Impossible de lire votre settings.json : {error}",
+  "doodle": "Gribouillis"
 }

@@ -243,5 +243,6 @@
   "check_failed": "No se pudo comprobar: {error}",
   "retry": "Reintentar",
   "settings_load_failed": "No se pudieron cargar los ajustes: {error}",
-  "settings_json_read_failed": "No se pudo leer tu settings.json: {error}"
+  "settings_json_read_failed": "No se pudo leer tu settings.json: {error}",
+  "doodle": "Garabato"
 }

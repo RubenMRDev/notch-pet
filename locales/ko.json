@@ -243,5 +243,6 @@
   "check_failed": "확인할 수 없었어요: {error}",
   "retry": "다시 시도",
   "settings_load_failed": "설정을 불러올 수 없었어요: {error}",
-  "settings_json_read_failed": "settings.json을 읽을 수 없었어요: {error}"
+  "settings_json_read_failed": "settings.json을 읽을 수 없었어요: {error}",
+  "doodle": "낙서"
 }

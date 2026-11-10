@@ -34,6 +34,8 @@ y te deja contestarle sin abrir nada. Para Windows.
 
 <p align="center"><img src="docs/pets.png" width="680" alt="Los cuatro aspectos: gota, gato, fantasma y robot"></p>
 
+Y **Garabato**: una mascota dibujada a mano, con un trazo que tiembla un poco como una animación en papel y las mismas caras y accesorios.
+
 También en **8 bits**: en Ajustes → Mascota eliges el estilo, *Suave* o *8 bits*, con las mismas caras, humores y accesorios.
 
 <p align="center"><img src="docs/pets-8bits.png" width="680" alt="Los cuatro aspectos en estilo 8 bits"></p>

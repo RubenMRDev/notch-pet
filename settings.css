@@ -104,7 +104,7 @@ option { background: #1b1b20; color: var(--txt); }
 .preview-foot { display: flex; justify-content: flex-end; padding: 14px; }
 
 /* Aspectos */
-.skins { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.skins { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
 .skin { position: relative; display: grid; justify-items: center; gap: 10px; padding: 16px 6px 12px; border-radius: 12px;
   border: 1px solid var(--line); background: var(--group); cursor: pointer; color: var(--txt-2); transition: border-color .15s, background .15s, color .15s; }
 .skin:hover { background: var(--hover); color: var(--txt); }

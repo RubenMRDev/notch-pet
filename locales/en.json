@@ -243,5 +243,6 @@
   "check_failed": "Couldn't check: {error}",
   "retry": "Retry",
   "settings_load_failed": "The settings couldn't be loaded: {error}",
-  "settings_json_read_failed": "Your settings.json couldn't be read: {error}"
+  "settings_json_read_failed": "Your settings.json couldn't be read: {error}",
+  "doodle": "Doodle"
 }

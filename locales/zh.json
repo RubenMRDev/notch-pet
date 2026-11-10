@@ -243,5 +243,6 @@
   "check_failed": "无法检查：{error}",
   "retry": "重试",
   "settings_load_failed": "无法加载设置：{error}",
-  "settings_json_read_failed": "无法读取你的 settings.json：{error}"
+  "settings_json_read_failed": "无法读取你的 settings.json：{error}",
+  "doodle": "涂鸦"
 }

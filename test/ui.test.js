@@ -196,6 +196,20 @@ test('estilo 8 bits: cada aspecto tiene su dibujo en píxeles', async () => {
   }
 });
 
+test('garabato: se dibuja a mano y cambia de cara con el humor', async () => {
+  await emit('config', { colors: { pet: '#f0916b', bg: '#0a0a0c', work: '#6aa8ff', wait: '#ffb340', done: '#5fd38d' }, skin: 'doodle', customImage: '', style: 'pixel' });
+  const shown = sel => js(`(() => { const e = document.querySelector('#petslot ${sel}'); return !!e && getComputedStyle(e).display !== 'none'; })()`);
+  assert.ok(await shown('.doodleslot svg.dd'), 'no se ve el garabato');
+  assert.strictEqual(await shown('.pxslot'), false, 'se ve el 8 bits debajo');
+  assert.strictEqual(await js(`document.querySelectorAll('#petslot .dd-f').length`), 3, 'faltan los contornos que tiemblan');
+  await state([mk(1)], { mood: 'happy' }); await settle();
+  assert.ok(await shown('.dd .f-happy')); assert.strictEqual(await shown('.dd .f-open'), false);
+  await state([mk(1, { status: 'waiting' })], { mood: 'waiting' }); await settle();
+  assert.ok(await shown('.dd .f-wait'));
+  await state([mk(1, { status: 'working', tool: 'Read' })], { mood: 'working', tool: 'read' }); await settle();
+  assert.ok(await shown('.dd .a-read'), 'sin gafas al leer');
+});
+
 test('cambia de idioma al momento (y los plurales de cada idioma)', async () => {
   await emit('open', true);
   await emit('i18n', locale('en'));

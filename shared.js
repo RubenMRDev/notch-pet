@@ -2,7 +2,7 @@
 (() => {
   const PET = '<div class="pet" aria-hidden="true"><div class="body"><div class="eye l"></div><div class="eye r"></div>'
     + '<div class="mouth"></div><div class="cheek l"></div><div class="cheek r"></div></div>'
-    + '<div class="pxslot"></div><img class="custom" alt=""><div class="acc"></div><div class="fx"></div></div>';
+    + '<div class="pxslot"></div><div class="doodleslot"></div><img class="custom" alt=""><div class="acc"></div><div class="fx"></div></div>';
 
   // ---------- Mascotas en 8 bits ----------
   // Rejilla de 15x15. La forma de cada aspecto se rasteriza y de ella salen solos el contorno, la luz y la sombra;
@@ -89,6 +89,7 @@
   const PIXEL = Object.fromEntries(Object.keys(SKIN).map(k => [k, pixelPet(k)]));
   // Pone a cada mascota el dibujo en pixeles de su aspecto (el data-skin mas cercano).
   function pixelize(root = document) {
+    doodle(root);
     for (const pet of root.querySelectorAll('.pet')) {
       const skin = pet.closest('[data-skin]')?.dataset.skin || 'blob', slot = pet.querySelector('.pxslot');
       if (!slot || slot.dataset.skin === skin) continue;
@@ -96,6 +97,42 @@
       slot.dataset.skin = skin;
     }
   }
+
+  // ---------- Garabato ----------
+  // A mano alzada: tres versiones del contorno, cada una con su temblor, que se alternan (pet.css) como en una
+  // animacion en papel. Caras y accesorios llevan las mismas clases que el 8 bits, asi que los humores ya funcionan.
+  const rnd = s => { const x = Math.sin(s * 127.1) * 43758.5453; return x - Math.floor(x); };
+  function outline(seed) {
+    const pts = [];
+    // Algo mas de una vuelta: el trazo se pasa un poco al cerrar, como cuando dibujas un circulo a boli.
+    for (let i = 0; i <= 13; i++) {
+      const a = (-0.5 + i / 12) * Math.PI * 2 - 0.15, j = 1 + (rnd(seed * 31 + i) - 0.5) * 0.12;
+      pts.push([15 + Math.cos(a) * 12.4 * j, 15.2 + Math.sin(a) * 9.6 * j]);
+    }
+    const f = n => n.toFixed(1);
+    let d = `M${f(pts[0][0])} ${f(pts[0][1])}`;
+    for (let i = 1; i < pts.length - 1; i++) d += ` Q${f(pts[i][0])} ${f(pts[i][1])} ${f((pts[i][0] + pts[i + 1][0]) / 2)} ${f((pts[i][1] + pts[i + 1][1]) / 2)}`;
+    return d;
+  }
+  const DOODLE = (() => {
+    const p = (d, cls) => `<path d="${d}"${cls ? ` class="${cls}"` : ''}/>`;
+    const frames = [1, 2, 3].map(s => p(outline(s), `dd-f dd-f${s}`)).join('');
+    const cheeks = `<g class="ck">${p('M5.4 17l1.6-1.2M6.8 17.9l1.6-1.2M22.6 15.8l1.6 1.2M21.2 16.7l1.6 1.2')}</g>`;
+    const faces = `<g class="f-open">${p('M11 12.6v3M19 12.6v3')}</g>`
+      + `<g class="f-closed">${p('M9.4 14.6h3.2M17.4 14.6h3.2')}</g>`
+      + '<g class="f-wait"><circle cx="11" cy="13.6" r="2.2"/><circle cx="19" cy="13.6" r="2.2"/></g>'
+      + `<g class="f-happy">${p('M9.2 15l1.8-2.6 1.8 2.6M17.2 15l1.8-2.6 1.8 2.6')}</g>`;
+    const mouths = `<g class="m-smile">${p('M13 18.4q2 1.8 4 0')}</g><g class="m-dot"><circle cx="15" cy="19" r=".5"/></g>`
+      + `<g class="m-flat">${p('M13.6 19h2.8')}</g><g class="m-o"><circle cx="15" cy="19.2" r="1.3"/></g>`
+      + `<g class="m-open">${p('M12.6 18.2h4.8q-.4 2.8-2.4 2.8q-2 0-2.4-2.8z')}</g>`;
+    const acc = `<g class="a-read"><circle cx="11" cy="14" r="3.3"/><circle cx="19" cy="14" r="3.3"/>${p('M14.3 13.6q.7-.6 1.4 0')}</g>`
+      + `<g class="a-edit">${p('M28.5 2.5 23 9.5l-.6 1.9 1.7-1.1')}</g>`
+      + `<g class="a-term"><rect x="22" y="17" width="10" height="7.5" rx="1.4"/>${p('M24 19.4l1.6 1.4-1.6 1.4M27.4 22.4h2.4')}</g>`
+      + `<g class="a-web"><circle cx="27.5" cy="20" r="3.4"/>${p('M24.1 20h6.8M27.5 16.6q-2.4 3.4 0 6.8q2.4-3.4 0-6.8')}</g>`;
+    return `<svg class="px dd" viewBox="0 0 30 26" aria-hidden="true"><g class="dd-body">${frames}${cheeks}${faces}${mouths}</g>${acc}</svg>`;
+  })();
+  // El dibujo es el mismo para todas: se pone una vez en cada mascota.
+  const doodle = (root = document) => { for (const s of root.querySelectorAll('.doodleslot:empty')) s.innerHTML = DOODLE; };
 
   // Iconos dibujados a mano en una rejilla de 24, trazo 1.8, mismo estilo en toda la app.
   const svg = d => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;

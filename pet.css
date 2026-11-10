@@ -173,6 +173,35 @@
 :root[data-style=pixel] .fx { font-family: var(--mono); font-weight: 800; }
 :root[data-style=pixel] .sleep .fx { animation: zzz 2.6s steps(4) infinite; }
 
+/* ---------- Garabato (data-skin=doodle): trazo a mano que tiembla, con cualquier estilo de dibujo ---------- */
+.doodleslot { display: none; }
+[data-skin=doodle] .doodleslot { display: block; position: absolute; inset: 0 0 -1px; }
+[data-skin=doodle] :is(.body, .pxslot, .acc) { display: none !important; }
+:root[data-style=pixel] [data-skin=doodle] .pet, :root[data-style=pixel][data-skin=doodle] .pet { --fat: 1; }
+.dd { width: 30px; height: 26px; --boil: .45s; }
+.dd :is(path, circle, rect) { fill: none; stroke: var(--c); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.dd :is(.m-dot circle, .m-open path) { fill: var(--c); }
+.dd .a-edit path { stroke: #ffd66b; }
+.dd .a-term rect { fill: var(--ink); stroke-width: 1.3; }
+.dd .a-term path { stroke: var(--done); stroke-width: 1.3; }
+.dd .a-web * { stroke: var(--work); stroke-width: 1.3; }
+.working[data-tool=term] .dd .a-term { display: inline; }
+/* El temblor: tres contornos, cada uno visible un tercio del tiempo. Mas rapido si te necesita, mas lento si duerme */
+.waiting .dd { --boil: .24s; }
+:is(.sleep, .bored) .dd { --boil: .9s; }
+.dd-f { opacity: 0; animation: ddboil var(--boil) steps(1) infinite; }
+.dd-f2 { animation-delay: calc(var(--boil) / -3); }
+.dd-f3 { animation-delay: calc(var(--boil) * -2 / 3); }
+@keyframes ddboil { 0% { opacity: 1; } 33.33%, 100% { opacity: 0; } }
+.dd-body { transform-box: fill-box; transform-origin: 50% 100%; }
+:is(.idle, .sleep) .dd-body { animation: breathe 3.6s ease-in-out infinite; }
+.bored .dd-body { animation: sway 4.5s ease-in-out infinite; }
+.working .dd-body { animation: hop .62s ease-in-out infinite; }
+.happy .dd-body { animation: hop 1.1s ease-in-out infinite; }
+.waiting .dd-body { animation: shake .36s ease-in-out infinite; }
+.waiting.impatient .dd-body { animation: stomp .3s linear infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .pet, .pet * { animation-duration: 0s !important; animation-iteration-count: 1 !important; }
+  .dd-f1 { opacity: 1; }
 }
