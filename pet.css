@@ -177,6 +177,8 @@
 .doodleslot { display: none; }
 [data-skin=doodle] .doodleslot { display: block; position: absolute; inset: 0 0 -1px; }
 [data-skin=doodle] :is(.body, .pxslot, .acc) { display: none !important; }
+/* Con el estilo 8 bits guardado, su regla de la terminal >_ ganaria a la de arriba y saldrian dos terminales */
+:root[data-style=pixel] [data-skin=doodle] .working[data-tool] .acc, :root[data-style=pixel][data-skin=doodle] .working[data-tool] .acc { display: none !important; }
 :root[data-style=pixel] [data-skin=doodle] .pet, :root[data-style=pixel][data-skin=doodle] .pet { --fat: 1; }
 .dd { width: 30px; height: 26px; --boil: .45s; }
 .dd :is(path, circle, rect) { fill: none; stroke: var(--c); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }

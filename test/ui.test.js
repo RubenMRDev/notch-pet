@@ -208,6 +208,9 @@ test('garabato: se dibuja a mano y cambia de cara con el humor', async () => {
   assert.ok(await shown('.dd .f-wait'));
   await state([mk(1, { status: 'working', tool: 'Read' })], { mood: 'working', tool: 'read' }); await settle();
   assert.ok(await shown('.dd .a-read'), 'sin gafas al leer');
+  await state([mk(1, { status: 'working', tool: 'Bash' })], { mood: 'working', tool: 'term' }); await settle();
+  assert.ok(await shown('.dd .a-term'), 'sin terminal');
+  assert.strictEqual(await shown('.acc'), false, 'dos terminales: tambien sale la >_ del 8 bits');
 });
 
 test('una bifurcación se distingue: «fork» va aparte y no se corta', async () => {

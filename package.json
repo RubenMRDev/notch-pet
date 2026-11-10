@@ -1,7 +1,7 @@
 {
   "name": "notch-pet",
   "productName": "Notch Pet",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Una mascota en el borde de tu pantalla que vigila tus sesiones de Claude Code",
   "author": "Ruben",
   "private": true,
