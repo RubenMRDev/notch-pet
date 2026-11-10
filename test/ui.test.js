@@ -210,6 +210,15 @@ test('garabato: se dibuja a mano y cambia de cara con el humor', async () => {
   assert.ok(await shown('.dd .a-read'), 'sin gafas al leer');
 });
 
+test('una bifurcación se distingue: «fork» va aparte y no se corta', async () => {
+  await state([mk(1, { title: 'Listado de notificaciones móvil con un título muy largo (fork)' }), mk(2, { title: 'Listado de notificaciones móvil con un título muy largo' })]);
+  await settle();
+  const r = await js("[...document.querySelectorAll('#list .row')].map(r => [r.querySelector('.name').textContent, !!r.querySelector('.tag')])");
+  assert.deepStrictEqual(r.map(x => x[1]), [true, false]);
+  assert.ok(!r[0][0].includes('(fork)'), 'el título sigue llevando (fork)');
+  assert.ok(await js("getComputedStyle(document.querySelector('#list .tag')).display !== 'none' && document.querySelector('#list .tag').getBoundingClientRect().width > 10"), 'la marca no se ve');
+});
+
 test('cambia de idioma al momento (y los plurales de cada idioma)', async () => {
   await emit('open', true);
   await emit('i18n', locale('en'));

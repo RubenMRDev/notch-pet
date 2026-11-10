@@ -28,6 +28,9 @@
   // ---------- Utilidades de texto ----------
   const folder = p => (p || '').split(/[\\/]/).filter(Boolean).pop() || t('session');
   const nameOf = s => str(s?.title) || folder(str(s?.cwd));
+  // La app de Claude titula las bifurcaciones «Titulo (fork)»: la marca va aparte para que los puntos suspensivos no se la coman.
+  const FORK = /\s*\(fork\)$/i;
+  const nameHtml = s => `<span class="name">${esc(nameOf(s).replace(FORK, ''))}</span>${FORK.test(nameOf(s)) ? '<span class="tag">fork</span>' : ''}`;
   const mins = ms => Math.max(0, Math.round(ms / 60e3));
   const ago = (now, at) => { const m = mins(now - at); return m < 1 ? t('now') : m < 60 ? t('minutes_short', { n: m }) : m < 1440 ? t('hours_short', { n: Math.round(m / 60) }) : t('days_short', { n: Math.round(m / 1440) }); };
   const dur = ms => { const m = mins(ms); return m < 60 ? t('minutes_short', { n: m }) : t('hours_minutes_short', { h: Math.floor(m / 60), m: m % 60 }); };
@@ -165,7 +168,7 @@
       <li class="row ${s.status} ${isOpen ? 'expanded' : ''}" data-id="${esc(s.id)}">
         <span class="st" title="${esc({ working: t('working'), waiting: t('needs_you'), done: t('finished'), idle: t('paused') }[s.status] || '')}">${indicator(s)}</span>
         <div class="main">
-          <div class="top"><span class="name">${esc(nameOf(s))}</span>${s.title ? `<span class="where">${esc(folder(s.cwd))}</span>` : ''}</div>
+          <div class="top">${nameHtml(s)}${s.title ? `<span class="where">${esc(folder(s.cwd))}</span>` : ''}</div>
           ${isOpen ? '' : `<div class="detail">${esc(plain(raw))}</div>`}
         </div>
         <span class="ago">${ago(now, s.at)}</span>
@@ -291,10 +294,10 @@
     if (!s) return endPeek();
     const a = s.asks?.[0];
     const what = !a ? '' : a.kind === 'question' ? a.questions[0]?.question : (a.detail || '').split('\n')[0];
-    if (a) $('peekcard').innerHTML = `<div class="pk ask"><div class="top"><i class="pdot"></i><span class="name">${esc(nameOf(s))}</span></div>
+    if (a) $('peekcard').innerHTML = `<div class="pk ask"><div class="top"><i class="pdot"></i>${nameHtml(s)}</div>
       <p><b>${esc(a.title)}</b>${what ? ` · ${esc(what)}` : ''}</p><small>${esc(t('hover_to_answer'))}</small></div>`;
     else $('peekcard').innerHTML = `<div class="pk">
-      <div class="top"><span class="ok">${ICON.check}</span><span class="name">${esc(nameOf(s))}</span>${s.title ? `<span class="where">${esc(folder(s.cwd))}</span>` : ''}</div>
+      <div class="top"><span class="ok">${ICON.check}</span>${nameHtml(s)}${s.title ? `<span class="where">${esc(folder(s.cwd))}</span>` : ''}</div>
       <p>${esc(plain(s.detail))}</p><small>${esc(t('hover_to_view_reply'))}</small></div>`;
     shell.classList.add('peek');
     if (last) render(last);

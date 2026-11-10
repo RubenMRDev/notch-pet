@@ -13,8 +13,10 @@ const NOT_PROMPT = /^\s*<(local-command|command-name|command-message|command-arg
 const INTERRUPTED = /^\s*\[Request interrupted/;
 
 // De las ultimas lineas de una transcripcion saca titulo, carpeta, estado, ultimo mensaje y ultima peticion.
-function parseTail(lines) {
-  let cwd, title = '', last, lastText = '', prompt = '', ended = false;
+// id: el de la conversacion. Una bifurcacion (fork) empieza con una copia del historial de la original, con el
+// sessionId de aquella: esas peticiones no son suyas, asi que no se muestran como su ultima peticion.
+function parseTail(lines, id) {
+  let cwd, title = '', last, lastText = '', prompt = '', ended = false, own = !id;
   for (let i = lines.length - 1; i >= 0; i--) {
     let j; try { j = JSON.parse(lines[i]); } catch { continue; }
     cwd ||= j.cwd;
@@ -22,15 +24,17 @@ function parseTail(lines) {
     // stop_hook_summary se escribe al terminar un turno: si va despues del ultimo mensaje, el turno acabo.
     if (!last && j.type === 'system' && j.subtype === 'stop_hook_summary') ended = true;
     if (j.isSidechain || j.isMeta || !['user', 'assistant'].includes(j.type)) continue;
+    own ||= !j.sessionId || j.sessionId === id;
     const c = j.message?.content, text = textOf(c);
     const isResult = Array.isArray(c) && c.some(x => x.type === 'tool_result');
     if (j.type === 'user' && !isResult && NOT_PROMPT.test(text)) continue;
     last ||= j;
     if (!lastText && j.type === 'assistant' && text) lastText = text;
-    if (!prompt && j.type === 'user' && !isResult && !INTERRUPTED.test(text)) prompt = text;
-    if (cwd && title && lastText && prompt) break;
+    if (!prompt && j.type === 'user' && !isResult && !INTERRUPTED.test(text) && (!id || !j.sessionId || j.sessionId === id)) prompt = text;
+    if (cwd && title && lastText && prompt && own) break;
   }
-  if (!last) return null;
+  // Sin ningun mensaje suyo es una copia que nunca llego a usarse: se veria como la original repetida.
+  if (!last || !own) return null;
   const c = last.message?.content;
   const tool = Array.isArray(c) && c.find(x => x.type === 'tool_use');
   const interrupted = last.type === 'user' && INTERRUPTED.test(textOf(c));
@@ -68,7 +72,7 @@ function recover(limit, dir = DIR) {
   for (const { file, id, at } of files.sort((a, b) => b.at - a.at)) {
     if (out.length >= limit) break;
     try {
-      const s = parseTail(tailLines(file));
+      const s = parseTail(tailLines(file), id);
       if (s) out.push({ id, at, ...s, detail: s.detail.slice(0, 1000), prompt: s.prompt.slice(0, 400) });
     } catch {}
   }
@@ -96,6 +100,11 @@ if (require.main === module) {
   // interrumpida con Esc
   assert.strictEqual(parseTail([user('a'), user('[Request interrupted by user]')]).status, 'idle');
   assert.strictEqual(parseTail([user('a'), user('[Request interrupted by user]')]).interrupted, true);
+  // bifurcacion: la peticion copiada de la original no cuenta como suya
+  const fork = parseTail([L({ type: 'user', sessionId: 'orig', message: { content: 'de la original' } }), L({ type: 'assistant', sessionId: 'nueva', message: { content: [{ type: 'tool_use', name: 'Bash' }] } })], 'nueva');
+  assert.strictEqual(fork.prompt, ''); assert.strictEqual(fork.status, 'working');
+  assert.strictEqual(parseTail([L({ type: 'user', sessionId: 'orig', message: { content: 'copia' } }), L({ type: 'custom-title', sessionId: 'nueva', customTitle: 'X' })], 'nueva'), null, 'copia sin usar: no sale');
+  assert.strictEqual(parseTail([L({ type: 'user', sessionId: 'nueva', message: { content: 'mia' } })], 'nueva').prompt, 'mia');
   const busy = parseTail([user('haz x'), L({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Bash' }] } })]);
   assert.strictEqual(busy.status, 'working'); assert.strictEqual(busy.tool, 'Bash');
   const res = parseTail([user('pide'), L({ type: 'user', message: { content: [{ type: 'tool_result' }] } })]);
